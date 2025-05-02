@@ -1,5 +1,28 @@
-.pio
-.vscode/.browse.c_cpp.db*
-.vscode/c_cpp_properties.json
-.vscode/launch.json
-.vscode/ipch
+# PlatformIO
+.pio/
+.vscode/
+
+# Optional: Keep only settings.json if shared settings are used
+!.vscode/settings.json
+
+# Unit testing
+test/.pio/
+
+# Python cache
+__pycache__/
+*.pyc
+
+# OS/system files
+.DS_Store
+Thumbs.db
+
+# Backup/temp/editor files
+*.bak
+*.swp
+*.tmp
+*~
+
+# Compiled firmware (if generated manually or copied in)
+*.elf
+*.bin
+*.hex
