@@ -1,10 +1,14 @@
 #include <Arduino.h>
 #include <AccelStepper.h>
 
-const int dirPin = 2;
-const int stepPin = 15;
+const int dirPin1 = 33;
+const int stepPin1 = 32;
+const int dirPin2 = 35;
+const int stepPin2 = 34;
 
-AccelStepper stepper(AccelStepper::DRIVER, stepPin, dirPin);
+
+AccelStepper stepper1(AccelStepper::DRIVER, stepPin1, dirPin1);
+AccelStepper stepper2(AccelStepper::DRIVER, stepPin2, dirPin2);
 
 enum State
 {
@@ -20,26 +24,31 @@ unsigned long waitStartTime = 0;
 
 void setup()
 {
-  stepper.setMaxSpeed(400);
-  stepper.setAcceleration(50);
+  stepper1.setMaxSpeed(400);
+  stepper1.setAcceleration(50);
+  stepper2.setMaxSpeed(400);
+  stepper2.setAcceleration(50);
 
   Serial.begin(9600);
 
-  stepper.setCurrentPosition(0);  // Set starting position to 0
+  stepper1.setCurrentPosition(0);  // Set starting position to 0
+  stepper2.setCurrentPosition(0);  // Set starting position to 0
 }
 
 
 void loop()
 {
-  stepper.run();
+  stepper1.run();
+  stepper2.run();
 
   switch (currentState) {
     case MOVE_TO_FIRST:
-      if (stepper.distanceToGo() == 0) {
+      if (stepper1.distanceToGo() == 0 && stepper2.distanceToGo() ==0) {
         waitStartTime = millis();
         currentState = WAIT_AFTER_FIRST;
       } else {
-        stepper.moveTo(500);
+        stepper1.moveTo(500);
+        stepper2.moveTo(500);
       }
       break;
 
@@ -50,11 +59,12 @@ void loop()
       break;
 
     case MOVE_TO_SECOND:
-      if (stepper.distanceToGo() == 0) {
+      if (stepper1.distanceToGo() == 0  && stepper2.distanceToGo() == 0) {
         waitStartTime = millis();
         currentState = WAIT_AFTER_SECOND;
       } else {
-        stepper.moveTo(1000); // Move further to position 1000
+        stepper1.moveTo(1000); // Move further to position 1000
+        stepper2.moveTo(100);
       }
       break;
 
@@ -65,11 +75,12 @@ void loop()
       break;
 
     case RETURN_HOME:
-      if (stepper.distanceToGo() == 0) {
+      if (stepper1.distanceToGo() == 0 && stepper2.distanceToGo() == 0) {
         // Optionally restart or stop
         // currentState = MOVE_TO_FIRST;  // If you want it to repeat
       } else {
-        stepper.moveTo(0);
+        stepper1.moveTo(0);
+        stepper2.moveTo(0);
       }
       break;
   }
