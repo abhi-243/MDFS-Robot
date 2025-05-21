@@ -1,214 +1,209 @@
-#include "Arduino.h"
+#include <Arduino.h>
 #include <AccelStepper.h>
-#include <Wire.h>
-#include <MPU9250.h>
 
-MPU9250 mpu;
+// ===================== Motor Pin Definitions =====================
+#define FRStep 40    // Front Right Step pin
+#define FRDir 38     // Front Right Direction pin
+#define FREn 36      // Front Right Enable pin
 
-const int MPU_ADDR = 0x68;
+#define FLStep 47    // Front Left Step pin
+#define FLDir 45     // Front Left Direction pin
+#define FLEn 43      // Front Left Enable pin
 
-float yawOffset = 0;
-float lastYaw = 0;
-const float YAW_TOLERANCE = 1.5;  // degrees
-const int BUTTON_PIN = 2;
+#define BRStep 53    // Back Right Step pin
+#define BRDir 51     // Back Right Direction pin
+#define BREn 49      // Back Right Enable pin
 
+#define BLStep 41    // Back Left Step pin
+#define BLDir 39     // Back Left Direction pin
+#define BLEn 37      // Back Left Enable pin
+
+#define FArmStep 52  // Front Arm Step pin
+#define FArmDir 50   // Front Arm Direction pin
+#define FArmEn 48    // Front Arm Enable pin
+
+#define BArmStep 46  // Back Arm Step pin
+#define BArmDir 44   // Back Arm Direction pin
+#define BArmEn 42    // Back Arm Enable pin
+
+#define motorInterfaceType 1 // Using driver with step/dir interface
+
+// ===================== Stepper Motor Instances =====================
+AccelStepper FRstepper(motorInterfaceType, FRStep, FRDir);  // Front Right
+AccelStepper FLstepper(motorInterfaceType, FLStep, FLDir);  // Front Left
+AccelStepper BRstepper(motorInterfaceType, BRStep, BRDir);  // Back Right
+AccelStepper BLstepper(motorInterfaceType, BLStep, BLDir);  // Back Left
+AccelStepper FArmStepper(motorInterfaceType, FArmStep, FArmDir); // Front Arm (unused here)
+AccelStepper BArmStepper(motorInterfaceType, BArmStep, BArmDir); // Back Arm (unused here)
+
+// ===================== Motion Parameters =====================
+const float wheelDiameterMM = 80.0;                 // Wheel diameter in mm
+const float stepsPerRevolution = 200 * 4;           // 200 steps/rev * 4 (microstepping = 1/4 step)
+const float wheelCircumference = PI * wheelDiameterMM; // Circumference = π * diameter
+const float stepsPerMM = stepsPerRevolution / wheelCircumference; // Steps per mm of travel
+
+int maxSpeed = 2000; // Maximum speed for steppers
+int accel = 3500;    // Acceleration for steppers
+
+// ===================== Direction Settings =====================
+// Use 1 or -1 to reverse motor direction to match real-world wiring
+int FrontRight = -1;
+int FrontLeft  = -1;
+int BackRight  = 1;
+int BackLeft   = -1;
+
+// ===================== State Machine for Movements =====================
+enum MovementState {
+  MOVE_RIGHT, WAIT1,
+  MOVE_LEFT, WAIT2,
+  MOVE_FORWARD1, WAIT3,
+  MOVE_FORWARD2, DONE
+};
+
+MovementState currentState = MOVE_RIGHT; // Starting state
+unsigned long movementStartTime = 0;     // Time when last movement ended
+bool movementStarted = false;            // Flag to indicate if current movement has been triggered
+
+// ===================== Movement Function =====================
+// Moves the robot a specified distance forward/backward and/or sideways (strafe)
+void moveDistance(float forwardMM, float strafeMM) {
+  float forwardSteps = forwardMM * stepsPerMM;
+  float strafeSteps = strafeMM * stepsPerMM;
+
+  // Mecanum wheel step calculation:
+  // Each wheel contributes differently to the combined movement vector
+  long flSteps = (long)(forwardSteps + strafeSteps);
+  long frSteps = (long)(forwardSteps - strafeSteps);
+  long blSteps = (long)(forwardSteps - strafeSteps);
+  long brSteps = (long)(forwardSteps + strafeSteps);
+
+  // Apply directional corrections based on wiring/orientation
+  FRstepper.move(FrontRight * frSteps);
+  FLstepper.move(FrontLeft * flSteps);
+  BRstepper.move(BackRight * brSteps);
+  BLstepper.move(BackLeft * blSteps);
+
+  // Set speed and acceleration for each motor
+  FRstepper.setMaxSpeed(maxSpeed); FRstepper.setAcceleration(accel);
+  FLstepper.setMaxSpeed(maxSpeed); FLstepper.setAcceleration(accel);
+  BRstepper.setMaxSpeed(maxSpeed); BRstepper.setAcceleration(accel);
+  BLstepper.setMaxSpeed(maxSpeed); BLstepper.setAcceleration(accel);
+}
+
+// Runs all steppers each loop iteration to progress toward target positions
+void runAllSteppers() {
+  FRstepper.run();
+  FLstepper.run();
+  BRstepper.run();
+  BLstepper.run();
+}
+
+// Check if any of the steppers are still running a motion
+bool steppersAreRunning() {
+  // Return true if any motor still has distance to cover
+  return FRstepper.isRunning() || FLstepper.isRunning() ||
+         BRstepper.isRunning() || BLstepper.isRunning();
+}
+
+// ===================== Setup Function =====================
 void setup() {
-  Serial.begin(115200);
-  while (!Serial);
+  Serial.begin(115200); // Start serial communication for debugging
 
-  pinMode(BUTTON_PIN, INPUT); // setup pin 2 for input
+  // Set all enable pins to OUTPUT mode
+  pinMode(FREn, OUTPUT); pinMode(FLEn, OUTPUT);
+  pinMode(BREn, OUTPUT); pinMode(BLEn, OUTPUT);
+  pinMode(FArmEn, OUTPUT); pinMode(BArmEn, OUTPUT);
 
-  Wire.begin();
-  Wire.setClock(400000);
+  // Enable all motors (LOW signal enables stepper drivers)
+  digitalWrite(FREn, LOW); digitalWrite(FLEn, LOW);
+  digitalWrite(BREn, LOW); digitalWrite(BLEn, LOW);
+  digitalWrite(FArmEn, LOW); digitalWrite(BArmEn, LOW);
 
-  delay(1000);
-
-  if (!mpu.setup(MPU_ADDR)) {
-    Serial.println("MPU9250 not found. Halting.");
-    while (1);
-  }
-
-  mpu.verbose(false);
-  mpu.calibrateAccelGyro();
-  mpu.calibrateMag();
+  // Configure speed and acceleration for each motor
+  FRstepper.setMaxSpeed(maxSpeed); FRstepper.setAcceleration(accel);
+  FLstepper.setMaxSpeed(maxSpeed); FLstepper.setAcceleration(accel);
+  BRstepper.setMaxSpeed(maxSpeed); BRstepper.setAcceleration(accel);
+  BLstepper.setMaxSpeed(maxSpeed); BLstepper.setAcceleration(accel);
 }
 
+// ===================== Main Loop =====================
 void loop() {
-  if (!mpu.update()) return;
+  runAllSteppers(); // Continuously run all motors
 
-  // Button pressed = tare yaw
-  if (digitalRead(BUTTON_PIN) == HIGH) {
-    yawOffset = mpu.getYaw();
+  unsigned long nowTime = millis(); // Current time in ms
+
+  // State machine for sequencing robot movements
+  switch (currentState) {
+    case MOVE_RIGHT:
+      if (!movementStarted) {
+        moveDistance(0, -170); // Strafe right by 170 mm
+        movementStarted = true;
+      }
+      if (!steppersAreRunning()) {
+        currentState = WAIT1; // Go to wait state
+        movementStartTime = nowTime;
+        movementStarted = false;
+      }
+      break;
+
+    case WAIT1:
+      // Wait 500ms after previous move before continuing
+      if (nowTime - movementStartTime >= 500) {
+        currentState = MOVE_LEFT;
+      }
+      break;
+
+    case MOVE_LEFT:
+      if (!movementStarted) {
+        moveDistance(0, -160); // Strafe left by 160 mm (typo: maybe should be positive?)
+        movementStarted = true;
+      }
+      if (!steppersAreRunning()) {
+        currentState = WAIT2;
+        movementStartTime = nowTime;
+        movementStarted = false;
+      }
+      break;
+
+    case WAIT2:
+      if (nowTime - movementStartTime >= 500) {
+        currentState = MOVE_FORWARD1;
+      }
+      break;
+
+    case MOVE_FORWARD1:
+      if (!movementStarted) {
+        moveDistance(900, 0); // Move forward by 900 mm
+        movementStarted = true;
+      }
+      if (!steppersAreRunning()) {
+        currentState = WAIT3;
+        movementStartTime = nowTime;
+        movementStarted = false;
+      }
+      break;
+
+    case WAIT3:
+      if (nowTime - movementStartTime >= 1000) {
+        currentState = MOVE_FORWARD2;
+      }
+      break;
+
+    case MOVE_FORWARD2:
+      if (!movementStarted) {
+        moveDistance(800, 0); // Move forward by another 800 mm
+        movementStarted = true;
+      }
+      if (!steppersAreRunning()) {
+        currentState = DONE;
+        movementStarted = false;
+      }
+      break;
+
+    case DONE:
+      // All motion complete. Idle state.
+      break;
   }
 
-  float currentYaw = mpu.getYaw();
-  float correctedYaw = currentYaw - yawOffset;
-
-  // Keep yaw within -180 to +180
-  if (correctedYaw > 180) correctedYaw -= 360;
-  if (correctedYaw < -180) correctedYaw += 360;
-
-  if (abs(correctedYaw - lastYaw) > YAW_TOLERANCE) {
-    lastYaw = correctedYaw;
-  }
-
-  Serial.print(lastYaw, 2);
-  Serial.print(",");
-  Serial.print(mpu.getPitch(), 2);
-  Serial.print(",");
-  Serial.println(mpu.getRoll(), 2);
-
-  delay(10);
+  delayMicroseconds(100); // Brief pause to avoid CPU overload
 }
-
-
-//#define FRDir 38
-//#define FRStep 40
-//#define FLDir 45
-//#define FLStep 47
-//#define BRDir 51
-//#define BRStep 53
-//#define BLDir 39
-//#define BLStep 41
-//#define FArmDir 50
-//#define FArmStep 52
-//#define BArmDir 44
-//#define BArmStep 46
-//
-//#define FREn 36  // Front Right
-//#define FLEn 43  // Front Left
-//#define BREn 49  // Back Right
-//#define BLEn 37  // Back Left
-//#define FArmEn 48 //Front Arm
-//#define BArmEn 42 // Back Arm
-//
-//#define motorInterfaceType 1 //Driver with step and direction pins
-//
-//AccelStepper stepper1(motorInterfaceType, FRStep, FRDir); // Front Right
-//AccelStepper stepper2(motorInterfaceType, FLStep, FLDir); // Front Left
-//AccelStepper stepper3(motorInterfaceType, BRStep, BRDir); // Back Right
-//AccelStepper stepper4(motorInterfaceType, BLStep, BLDir); // Back Left
-//AccelStepper stepper5(motorInterfaceType, FArmStep, FArmDir); // Back Right
-//AccelStepper stepper6(motorInterfaceType, BArmStep, BArmDir); // Back Left
-//
-//int maxSpeed = 2000; // steps per second
-//int midSpeed = 1500; // steps per second
-//
-//// Manually set direction: 1 for forward, -1 for reverse
-//int FrontRight = -1;
-//int FrontLeft  = -1;
-//int BackRight  = -1;
-//int BackLeft   = -1;
-//int FrontArm  = -1;
-//int BackArm   = 1;
-//
-//unsigned long startTime;
-//enum Phase { PHASE1, PHASE2, PHASE3, DONE };
-//Phase currentPhase = PHASE1;
-//
-//void setup() {
-//  // Set enable pins as outputs
-//  pinMode(FREn, OUTPUT);
-//  pinMode(FLEn, OUTPUT);
-//  pinMode(BREn, OUTPUT);
-//  pinMode(BLEn, OUTPUT);
-//  pinMode(FArmEn, OUTPUT);
-//  pinMode(BArmEn, OUTPUT);
-//
-//  // Set motor directions and speeds
-//  stepper1.setMaxSpeed(maxSpeed);
-//  stepper1.setSpeed(FrontRight * maxSpeed);
-//
-//  stepper2.setMaxSpeed(maxSpeed);
-//  stepper2.setSpeed(FrontLeft * maxSpeed);
-//
-//  stepper3.setMaxSpeed(maxSpeed);
-//  stepper3.setSpeed(BackRight * maxSpeed);
-//
-//  stepper4.setMaxSpeed(maxSpeed);
-//  stepper4.setSpeed(BackLeft * maxSpeed);
-//
-//  stepper5.setMaxSpeed(maxSpeed);
-//  stepper5.setSpeed(FrontArm * maxSpeed);
-//
-//  stepper6.setMaxSpeed(maxSpeed);
-//  stepper6.setSpeed(BackArm * maxSpeed);
-//
-//  // Enable all motors initially
-//  digitalWrite(FREn, LOW); // Front Right
-//  digitalWrite(FLEn, LOW); // Front Left
-//  digitalWrite(BREn, LOW); // Back Right
-//  digitalWrite(BLEn, LOW); // Back Left
-//  digitalWrite(FArmEn, LOW); // Back Right
-//  digitalWrite(BArmEn, LOW); // Back Left
-//
-//  startTime = millis();
-//}
-//
-//void loop() {
-//  unsigned long elapsed = millis() - startTime;
-//
-//  switch (currentPhase) {
-//    case PHASE1:
-//      // Run all motors for 3 seconds
-//      stepper1.runSpeed();
-//      stepper2.runSpeed();
-//      stepper3.runSpeed();
-//      stepper4.runSpeed();
-//      stepper5.runSpeed();
-//      stepper6.runSpeed();
-//
-//      if (elapsed >= 3000) {
-//        // Disable back motors
-//        digitalWrite(FREn, HIGH); // Back Right
-//        digitalWrite(FLEn, HIGH); // Back Left
-//        //reset speed
-//        stepper3.setMaxSpeed(midSpeed);
-//        stepper3.setSpeed(BackRight * midSpeed);
-//        currentPhase = PHASE2;
-//        startTime = millis();
-//      }
-//      break;
-//
-//    case PHASE2:
-//      // Run front motors for 2 seconds
-//      stepper3.runSpeed(); // Front Right
-//      stepper4.runSpeed(); // Front Left
-//
-//      if (elapsed >= 5000) {
-//        // Re-enable back motors
-//                //reset speed
-//        stepper3.setMaxSpeed(maxSpeed);
-//        stepper3.setSpeed(BackRight * maxSpeed);
-//        digitalWrite(BREn, LOW); // Back Right
-//        currentPhase = PHASE3;
-//        startTime = millis();
-//      }
-//      break;
-//
-//    case PHASE3:
-//      // Run all motors for 10 seconds
-//      stepper1.runSpeed();
-//      stepper2.runSpeed();
-//      stepper3.runSpeed();
-//      stepper4.runSpeed();
-//      stepper5.runSpeed();
-//      stepper6.runSpeed();
-//      
-//      if (elapsed >= 1000) {
-//        // Optionally stop everything after final phase
-//        digitalWrite(FREn, HIGH);
-//        digitalWrite(FLEn, HIGH);
-//        digitalWrite(BREn, HIGH);
-//        digitalWrite(BLEn, HIGH);
-//        digitalWrite(FArmEn, HIGH);
-//        digitalWrite(BArmEn, HIGH);
-//        currentPhase = DONE;
-//      }
-//      break;
-//
-//    case DONE:
-//      // All motors disabled — do nothing
-//      break;
-//  }
-//}
