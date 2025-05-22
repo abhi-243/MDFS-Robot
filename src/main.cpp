@@ -170,7 +170,7 @@ void carouselHandler()
     case 1:
     if(nowTime - pistonLast > pistonDelay)
     {
-      ejectorServo.write(90);
+      pistonPosition = 90;
       pistonLast = nowTime;
       carouselState = 2;
     }
@@ -179,7 +179,7 @@ void carouselHandler()
     case 2:
     if(nowTime - pistonLast > pistonDelay)
     {
-      ejectorServo.write(180);
+      pistonPosition = 180;
       carouselRotPrev = nowTime;
       carouselState = 0;
     }
@@ -254,6 +254,7 @@ void setup() {
 void loop() {
   runAllSteppers(); // Continuously run all motors
   carouselHandler();
+  ejectorServo.write(pistonPosition);
 
   nowTime = millis(); // Current time in ms
 
