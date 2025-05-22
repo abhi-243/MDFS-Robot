@@ -167,7 +167,7 @@ void carouselHandler()
     }
     break;
 
-    //*case 1:
+    case 1:
     if(nowTime - pistonLast > pistonDelay)
     {
       ejectorServo.write(90);
