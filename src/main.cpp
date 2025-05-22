@@ -168,6 +168,15 @@ void carouselHandler()
     break;
 
     case 1:
+    delay(500);
+    pistonPosition = 90;
+    delay(500);
+    pistonPosition = 180;
+    carouselRotPrev = nowTime;
+    carouselState = 0;
+    break;
+
+    /*case 1:
     if(nowTime - pistonLast > pistonDelay)
     {
       pistonPosition = 90;
@@ -183,7 +192,7 @@ void carouselHandler()
       carouselRotPrev = nowTime;
       carouselState = 0;
     }
-    break;
+    break; */
   }
 }
 
