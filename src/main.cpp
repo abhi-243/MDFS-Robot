@@ -65,6 +65,13 @@ unsigned long nowTime = 0;
 unsigned long gateTimePrev = 0; // for Aidan's servo gate locks
 const int lockDelay = 50;
 
+unsigned long carouselRotPrev = 0;
+const int carouselDelay = 2000;
+
+// ===================== General Variables ======================
+int carouselCycles = 0;
+bool carouselEject = false;
+
 // ===================== Direction Settings =====================
 // Use 1 or -1 to reverse motor direction to match real-world wiring
 int FrontRight = -1;
@@ -125,11 +132,55 @@ bool steppersAreRunning() {
          BRstepper.isRunning() || BLstepper.isRunning();
 }
 
+void carouselHandler()
+{
+  CrslStepper.setSpeed(300);
+  CrslStepper.runSpeedToPosition();
+
+  int currAction = 0; // 0 == eject, 1 == rotate
+  switch (currAction)
+  {
+  case 0:
+    if(carouselEject == true)
+    {
+      if(carouselRotPrev - nowTime >= carouselDelay / 4)
+      {
+        ejectorServo.write(90);
+      }
+      if(carouselRotPrev - nowTime >= carouselDelay / 2)
+      {
+        ejectorServo.write(0);
+        carouselRotPrev = nowTime;
+        currAction = 1;
+      }
+    }
+    else 
+    {
+      currAction = 1;
+    }
+    break;
+  
+  case 1:
+    if(carouselCycles > 0 && carouselRotPrev - nowTime >= carouselDelay)
+    {
+      CrslStepper.move(683);
+      carouselCycles -= carouselCycles;
+      carouselRotPrev = nowTime;
+      if(carouselEject == true)
+      {
+        currAction = 0;
+      }
+    }
+    break;
+  }
+}
+
 // ===================== Setup Function =====================
 void setup() {
   Serial.begin(115200); // Start serial communication for debugging
 
   ejectorServo.attach(11);
+
   servo1.attach(servoPin1);
   servo2.attach(servoPin2);
   servo3.attach(servoPin3);
@@ -150,13 +201,17 @@ void setup() {
   FLstepper.setMaxSpeed(maxSpeed); FLstepper.setAcceleration(accel);
   BRstepper.setMaxSpeed(maxSpeed); BRstepper.setAcceleration(accel);
   BLstepper.setMaxSpeed(maxSpeed); BLstepper.setAcceleration(accel);
-  CrslStepper.setSpeed(100);
   CrslStepper.setMaxSpeed(600);
+
+  //-------------------- CAROUSEL TESTING REMOVE LATER -------------------
+  carouselCycles = 3;
+  carouselEject = true;
 }
 
 // ===================== Main Loop =====================
 void loop() {
   runAllSteppers(); // Continuously run all motors
+  carouselHandler();
 
   nowTime = millis(); // Current time in ms
 
