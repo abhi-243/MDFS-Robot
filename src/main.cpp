@@ -150,7 +150,6 @@ void carouselHandler()
 {
   CrslStepper.runSpeedToPosition();
   CrslStepper.setSpeed(300);
-  ejectorServo.write(pistonPosition);
 
   switch(carouselState)
   {
@@ -255,6 +254,7 @@ void setup() {
 void loop() {
   runAllSteppers(); // Continuously run all motors
   carouselHandler();
+  ejectorServo.write(pistonPosition);
 
   nowTime = millis(); // Current time in ms
 
