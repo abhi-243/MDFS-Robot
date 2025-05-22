@@ -254,7 +254,7 @@ void setup() {
 void loop() {
   runAllSteppers(); // Continuously run all motors
   carouselHandler();
-  if(CrslStepper.distanceToGo() == 0)
+  if(CrslStepper.isRunning() == false)
   {
     ejectorServo.write(pistonPosition);
   }
