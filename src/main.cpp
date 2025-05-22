@@ -163,12 +163,12 @@ void carouselHandler()
     {
       if(nowTime - pistonLast >= pistonDelay /2)
       {
-        pistonPosition = 90;
+        pistonPosition = 180;
 
       }
       if(nowTime - pistonLast >= pistonDelay)
       {
-        pistonPosition = 180;
+        pistonPosition = 90;
         pistonLast = nowTime;
         ejkt = false;
       }
