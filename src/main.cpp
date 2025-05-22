@@ -168,7 +168,7 @@ void carouselHandler()
     break;
 
     case 1:
-    if(nowTime - pistonLast > pistonDelay && CrslStepper.distanceToGo() == 0)
+    if(nowTime - pistonLast > pistonDelay)
     {
       pistonPosition = 90;
       pistonLast = nowTime;
@@ -254,7 +254,10 @@ void setup() {
 void loop() {
   runAllSteppers(); // Continuously run all motors
   carouselHandler();
-  ejectorServo.write(pistonPosition);
+  if(CrslStepper.distanceToGo() == 0)
+  {
+    ejectorServo.write(pistonPosition);
+  }
 
   nowTime = millis(); // Current time in ms
 
