@@ -156,6 +156,7 @@ void carouselHandler()
       ejectorServo.write(180);
       delay(500);
       ejectorServo.write(90);
+      carouselRotPrev = nowTime;
     }
 }
 
