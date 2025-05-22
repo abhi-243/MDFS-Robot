@@ -168,7 +168,7 @@ void carouselHandler()
     break;
 
     case 1:
-    if(nowTime - pistonLast > pistonDelay && CrslStepper.distanceToGo() < 3)
+    if(nowTime - pistonLast > pistonDelay && CrslStepper.distanceToGo() == 0)
     {
       pistonPosition = 90;
       pistonLast = nowTime;
