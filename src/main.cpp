@@ -254,10 +254,7 @@ void setup() {
 void loop() {
   runAllSteppers(); // Continuously run all motors
   carouselHandler();
-  if(CrslStepper.isRunning() == false)
-  {
-    ejectorServo.write(pistonPosition);
-  }
+  ejectorServo.write(pistonPosition);
 
   nowTime = millis(); // Current time in ms
 
