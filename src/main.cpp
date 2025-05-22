@@ -1,5 +1,6 @@
 #include <Arduino.h>
 #include <AccelStepper.h>
+#include <Servo.h>
 
 // ===================== Motor Pin Definitions =====================
 #define FRStep 40    // Front Right Step pin
@@ -26,6 +27,11 @@
 #define BArmDir 44   // Back Arm Direction pin
 #define BArmEn 42    // Back Arm Enable pin
 
+#define servoPin1 9
+#define servoPin2 4
+#define servoPin3 10
+#define servoPin4 3
+
 #define motorInterfaceType 1 // Using driver with step/dir interface
 
 // ===================== Stepper Motor Instances =====================
@@ -35,6 +41,14 @@ AccelStepper BRstepper(motorInterfaceType, BRStep, BRDir);  // Back Right
 AccelStepper BLstepper(motorInterfaceType, BLStep, BLDir);  // Back Left
 AccelStepper FArmStepper(motorInterfaceType, FArmStep, FArmDir); // Front Arm (unused here)
 AccelStepper BArmStepper(motorInterfaceType, BArmStep, BArmDir); // Back Arm (unused here)
+AccelStepper CrslStepper(AccelStepper::FULL4WIRE, 30,26,28,24); // Stepper for the carousel 
+
+// ===================== Servo Instances =======================
+Servo ejectorServo;
+Servo servo1;
+Servo servo2;
+Servo servo3;
+Servo servo4;
 
 // ===================== Motion Parameters =====================
 const float wheelDiameterMM = 80.0;                 // Wheel diameter in mm
@@ -44,6 +58,12 @@ const float stepsPerMM = stepsPerRevolution / wheelCircumference; // Steps per m
 
 int maxSpeed = 2000; // Maximum speed for steppers
 int accel = 3500;    // Acceleration for steppers
+
+// ===================== Timing Variables =======================
+unsigned long nowTime = 0;
+
+unsigned long gateTimePrev = 0; // for Aidan's servo gate locks
+const int lockDelay = 50;
 
 // ===================== Direction Settings =====================
 // Use 1 or -1 to reverse motor direction to match real-world wiring
@@ -109,6 +129,12 @@ bool steppersAreRunning() {
 void setup() {
   Serial.begin(115200); // Start serial communication for debugging
 
+  ejectorServo.attach(11);
+  servo1.attach(servoPin1);
+  servo2.attach(servoPin2);
+  servo3.attach(servoPin3);
+  servo4.attach(servoPin4);
+
   // Set all enable pins to OUTPUT mode
   pinMode(FREn, OUTPUT); pinMode(FLEn, OUTPUT);
   pinMode(BREn, OUTPUT); pinMode(BLEn, OUTPUT);
@@ -124,13 +150,15 @@ void setup() {
   FLstepper.setMaxSpeed(maxSpeed); FLstepper.setAcceleration(accel);
   BRstepper.setMaxSpeed(maxSpeed); BRstepper.setAcceleration(accel);
   BLstepper.setMaxSpeed(maxSpeed); BLstepper.setAcceleration(accel);
+  CrslStepper.setSpeed(100);
+  CrslStepper.setMaxSpeed(600);
 }
 
 // ===================== Main Loop =====================
 void loop() {
   runAllSteppers(); // Continuously run all motors
 
-  unsigned long nowTime = millis(); // Current time in ms
+  nowTime = millis(); // Current time in ms
 
   // State machine for sequencing robot movements
   switch (currentState) {
@@ -204,6 +232,29 @@ void loop() {
       // All motion complete. Idle state.
       break;
   }
+
+  //------------------------------------------ Sweep Code to test Aidans gate servos
+  for(int angle = 90; angle >= 180; angle--)
+  {
+    if(nowTime - gateTimePrev >= lockDelay)
+    {
+      servo1.write(angle);
+      servo2.write(180-angle);
+      gateTimePrev = nowTime;
+    }
+  }
+
+    gateTimePrev = nowTime;
+    for(int angle = 90; angle <= 180; angle++)
+    {
+      if(nowTime-gateTimePrev >= lockDelay)
+      {
+        servo1.write(angle);
+        servo2.write(180-angle);
+        gateTimePrev = nowTime;
+      }
+    }
+  //---------------------------------------------------End Sweep test
 
   delayMicroseconds(100); // Brief pause to avoid CPU overload
 }
