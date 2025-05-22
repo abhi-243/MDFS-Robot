@@ -32,6 +32,14 @@
 #define servoPin3 10
 #define servoPin4 3
 
+//max vel and accel
+#define maxSpeedArms 500
+#define accelArms 1750
+ 
+//direction settings
+#define FArm 1 //placeholder
+#define BArm 1 //placeholder
+
 #define motorInterfaceType 1 // Using driver with step/dir interface
 
 // ===================== Stepper Motor Instances =====================
@@ -175,6 +183,30 @@ void carouselHandler()
   }
 }
 
+// ===================Back arm function ====================
+
+void backArmPosition (float angleBackDegrees){
+  // Clamp angle
+  if (angleBackDegrees < 0) angleBackDegrees += 360;
+  if (angleBackDegrees >= 360) angleBackDegrees -= 360;
+ 
+  long targetStepsBackArm = (angleBackDegrees / 360.0) * stepsPerRevolution;
+  BArmStepper.move(targetStepsBackArm);
+ 
+}
+
+//===================== Front arm function
+
+void frontArmPosition (float angleFrontDegrees){
+  // Clamp angle
+  if (angleFrontDegrees < 0) angleFrontDegrees += 360;
+  if (angleFrontDegrees >= 360) angleFrontDegrees -= 360;
+ 
+  long targetStepsFrontArm = (angleFrontDegrees / 360.0) * stepsPerRevolution;
+  FArmStepper.move(targetStepsFrontArm);
+ 
+}
+
 // ===================== Setup Function =====================
 void setup() {
   Serial.begin(115200); // Start serial communication for debugging
@@ -201,6 +233,10 @@ void setup() {
   FLstepper.setMaxSpeed(maxSpeed); FLstepper.setAcceleration(accel);
   BRstepper.setMaxSpeed(maxSpeed); BRstepper.setAcceleration(accel);
   BLstepper.setMaxSpeed(maxSpeed); BLstepper.setAcceleration(accel);
+  FArmStepper.setMaxSpeed(maxSpeedArms); 
+  FArmStepper.setAcceleration(accelArms);
+  BArmStepper.setMaxSpeed(maxSpeedArms); 
+  BArmStepper.setAcceleration(accelArms);
   CrslStepper.setMaxSpeed(600);
 
   //-------------------- CAROUSEL TESTING REMOVE LATER -------------------
@@ -289,7 +325,7 @@ void loop() {
   }
 
   //------------------------------------------ Sweep Code to test Aidans gate servos
-  for(int angle = 90; angle >= 180; angle--)
+  /*for(int angle = 90; angle >= 180; angle--)
   {
     if(nowTime - gateTimePrev >= lockDelay)
     {
@@ -308,7 +344,7 @@ void loop() {
         servo2.write(180-angle);
         gateTimePrev = nowTime;
       }
-    }
+    }*/
   //---------------------------------------------------End Sweep test
 
   delayMicroseconds(100); // Brief pause to avoid CPU overload
