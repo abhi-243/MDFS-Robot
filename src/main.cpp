@@ -173,17 +173,6 @@ void carouselHandler()
         ejkt = false;
       }
     }
-    if(carouselEject == true)
-    {
-      if(nowTime - pistonLast >= pistonDelay)
-      {
-        ejectorServo.write(90);
-      }
-      else
-      {
-        ejectorServo.write(180);
-      }
-    }
 }
 
 // ===================Back arm function ====================
