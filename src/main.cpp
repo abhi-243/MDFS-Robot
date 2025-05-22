@@ -215,6 +215,7 @@ void setup() {
   BArmStepper.setMaxSpeed(maxSpeedArms); 
   BArmStepper.setAcceleration(accelArms);
   CrslStepper.setMaxSpeed(600);
+  CrslStepper.setSpeed(100);
 
   //-------------------- CAROUSEL TESTING REMOVE LATER -------------------
   carouselCycles = 3;
