@@ -144,13 +144,13 @@ bool steppersAreRunning() {
 
 void carouselHandler()
 {
-  CrslStepper.setSpeed(300);
   CrslStepper.runSpeedToPosition();
+  CrslStepper.setSpeed(300);
 
     if(carouselCycles > 0 && (carouselRotPrev - nowTime) >= carouselDelay)
     {
       CrslStepper.move(683);
-      carouselCycles -= carouselCycles;
+      carouselCycles = carouselCycles - 1;
       carouselRotPrev = nowTime;
       delay(2000);
       ejectorServo.write(180);
