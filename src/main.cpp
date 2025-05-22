@@ -74,7 +74,9 @@ unsigned long gateTimePrev = 0; // for Aidan's servo gate locks
 const int lockDelay = 50;
 
 unsigned long carouselRotPrev = 0;
-const int carouselDelay = 2000;
+unsigned long pistonLast = 0;
+const int pistonDelay = 1000;
+const int carouselDelay = 5000;
 
 // ===================== General Variables ======================
 int carouselCycles = 0;
@@ -146,17 +148,26 @@ void carouselHandler()
 {
   CrslStepper.runSpeedToPosition();
   CrslStepper.setSpeed(300);
+  bool eject;
 
-    if(carouselCycles > 0 && (carouselRotPrev - nowTime) >= carouselDelay)
+    if(carouselCycles > 0 && (nowTime - carouselRotPrev) >= carouselDelay)
     {
       CrslStepper.move(683);
       carouselCycles = carouselCycles - 1;
       carouselRotPrev = nowTime;
-      delay(2000);
-      ejectorServo.write(180);
-      delay(500);
-      ejectorServo.write(90);
-      carouselRotPrev = nowTime;
+      eject = true;
+      pistonLast = nowTime;
+    }
+    if(eject == true)
+    {
+      if(nowTime - pistonLast >= pistonDelay)
+      {
+        ejectorServo.write(90);
+      }
+      else
+      {
+        ejectorServo.write(180);
+      }
     }
 }
 
@@ -189,6 +200,7 @@ void setup() {
   Serial.begin(115200); // Start serial communication for debugging
 
   ejectorServo.attach(11);
+  ejectorServo.write(180);
 
   servo1.attach(servoPin1);
   servo2.attach(servoPin2);
