@@ -82,6 +82,7 @@ const int carouselDelay = 5000;
 int carouselCycles = 0;
 bool carouselEject = false;
 int pistonPosition = 180;
+int carouselState = 0; //0 = move, 1 = extend, 2 = retract;
 
 // ===================== Direction Settings =====================
 // Use 1 or -1 to reverse motor direction to match real-world wiring
@@ -150,29 +151,41 @@ void carouselHandler()
   CrslStepper.runSpeedToPosition();
   CrslStepper.setSpeed(300);
   ejectorServo.write(pistonPosition);
-  bool ejkt; // handles whether it has ejected yet or not
 
+  switch(carouselState)
+  {
+    case 0:
     if(carouselCycles > 0 && (nowTime - carouselRotPrev) >= carouselDelay)
     {
       CrslStepper.move(683);
       carouselCycles = carouselCycles - 1;
       carouselRotPrev = nowTime;
-      ejkt = true;
-    }
-    if(CrslStepper.distanceToGo() < 3 && carouselEject == true && ejkt == true)
-    {
-      if(nowTime - pistonLast >= pistonDelay /2)
+      if(carouselEject == true)
       {
-        pistonPosition = 180;
-
-      }
-      if(nowTime - pistonLast >= pistonDelay)
-      {
-        pistonPosition = 90;
+        carouselState = 1;
         pistonLast = nowTime;
-        ejkt = false;
       }
     }
+    break;
+
+    case 1:
+    if(nowTime - pistonLast > pistonDelay)
+    {
+      pistonPosition = 180;
+      pistonLast = nowTime;
+      carouselState = 2;
+    }
+    break;
+
+    case 2:
+    if(nowTime - pistonLast > pistonDelay)
+    {
+      pistonPosition = 90;
+      carouselRotPrev = nowTime;
+      carouselState = 0;
+    }
+    break;
+  }
 }
 
 // ===================Back arm function ====================
