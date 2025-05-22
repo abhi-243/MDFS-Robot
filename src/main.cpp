@@ -153,11 +153,11 @@ void carouselHandler()
     {
       if(carouselRotPrev - nowTime >= carouselDelay / 4)
       {
-        ejectorServo.write(90);
+        ejectorServo.write(180);
       }
       if(carouselRotPrev - nowTime >= carouselDelay / 2)
       {
-        ejectorServo.write(0);
+        ejectorServo.write(90);
         carouselRotPrev = nowTime;
         currAction = 1;
       }
