@@ -167,19 +167,10 @@ void carouselHandler()
     }
     break;
 
-    case 1:
-    delay(500);
-    pistonPosition = 90;
-    delay(500);
-    pistonPosition = 180;
-    carouselRotPrev = nowTime;
-    carouselState = 0;
-    break;
-
-    /*case 1:
+    //*case 1:
     if(nowTime - pistonLast > pistonDelay)
     {
-      pistonPosition = 90;
+      ejectorServo.write(90);
       pistonLast = nowTime;
       carouselState = 2;
     }
@@ -188,11 +179,11 @@ void carouselHandler()
     case 2:
     if(nowTime - pistonLast > pistonDelay)
     {
-      pistonPosition = 180;
+      ejectorServo.write(180);
       carouselRotPrev = nowTime;
       carouselState = 0;
     }
-    break; */
+    break;
   }
 }
 
@@ -263,7 +254,6 @@ void setup() {
 void loop() {
   runAllSteppers(); // Continuously run all motors
   carouselHandler();
-  ejectorServo.write(pistonPosition);
 
   nowTime = millis(); // Current time in ms
 
