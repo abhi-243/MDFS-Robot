@@ -140,47 +140,23 @@ bool steppersAreRunning() {
          BRstepper.isRunning() || BLstepper.isRunning();
 }
 
+// ================================= Carousel control Code ==========================
+
 void carouselHandler()
 {
   CrslStepper.setSpeed(300);
   CrslStepper.runSpeedToPosition();
 
-  int currAction = 0; // 0 == eject, 1 == rotate
-  switch (currAction)
-  {
-  case 0:
-    if(carouselEject == true)
-    {
-      if(carouselRotPrev - nowTime >= carouselDelay / 4)
-      {
-        ejectorServo.write(90);
-      }
-      if(carouselRotPrev - nowTime >= carouselDelay / 2)
-      {
-        ejectorServo.write(0);
-        carouselRotPrev = nowTime;
-        currAction = 1;
-      }
-    }
-    else 
-    {
-      currAction = 1;
-    }
-    break;
-  
-  case 1:
-    if(carouselCycles > 0 && carouselRotPrev - nowTime >= carouselDelay)
+    if(carouselCycles > 0 && (carouselRotPrev - nowTime) >= carouselDelay)
     {
       CrslStepper.move(683);
       carouselCycles -= carouselCycles;
       carouselRotPrev = nowTime;
-      if(carouselEject == true)
-      {
-        currAction = 0;
-      }
+      delay(2000);
+      ejectorServo.write(180);
+      delay(500);
+      ejectorServo.write(90);
     }
-    break;
-  }
 }
 
 // ===================Back arm function ====================
