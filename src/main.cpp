@@ -53,19 +53,21 @@ const int servoRPM = 13;
 const float servoDelay = 60000.0 / (servoRPM * 180.0); // in milliseconds
 struct SmoothServoMover {
   Servo* servo;
-  int currentAngle = 90;
-  int targetAngle = 90;
+  int currentAngle;
+  int targetAngle;
   unsigned long lastMoveTime = 0;
   bool active = false;
-
+  
   void attach(Servo& s, int pin, int initialAngle) {
     servo = &s;
-    servo->attach(pin);
     currentAngle = initialAngle;
     targetAngle = initialAngle;
+    servo->attach(pin);
     servo->write(initialAngle);
+    lastMoveTime = millis(); // Initialize timing properly
+    active = false;
   }
-
+  
    void moveTo(int angle) {
     targetAngle = angle;
     active = true;
@@ -98,6 +100,8 @@ struct SmoothServoMover {
 Servo ejectorServo;     // Ejector Servo
 Servo FrontFlapServo;   // Front Flap Servo
 Servo BackFlapServo;    // Back Flap Servo
+Servo FrontArmServo;
+Servo BackArmServo;
 SmoothServoMover FrontServoMover;
 SmoothServoMover BackServoMover;
 
@@ -287,8 +291,8 @@ void setup() {
   FrontFlapServo.attach(FFlapServoPin);
   BackFlapServo.attach(BFlapServoPin);
 
-  FrontServoMover.attach(*(new Servo), FArmServoPin, 90);
-  BackServoMover.attach(*(new Servo), BArmServoPin, 90);
+  FrontServoMover.attach(FrontArmServo, FArmServoPin, 0);
+  BackServoMover.attach(BackArmServo, BArmServoPin, 170);
 
   // Set all enable pins to OUTPUT mode
   pinMode(FREn, OUTPUT); pinMode(FLEn, OUTPUT);
