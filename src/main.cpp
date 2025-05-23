@@ -27,18 +27,19 @@
 #define BArmDir 44   // Back Arm Direction pin
 #define BArmEn 42    // Back Arm Enable pin
 
-#define servoPin1 9
-#define servoPin2 4
-#define servoPin3 10
-#define servoPin4 3
+#define IN1 30
+#define IN2 26
+#define IN3 28
+#define IN4 24
 
-//max vel and accel
+#define FFlapServoPin 9   // Flap Servo Pin
+#define BFlapServoPin 4   // Flap Servo Pin
+#define FArmServo 10      // Arm Servo Pin
+#define BArmServo 3       // Arm Servo Pin
+
+//max vel and max accel
 #define maxSpeedArms 500
 #define accelArms 1750
- 
-//direction settings
-#define FArm 1 //placeholder
-#define BArm 1 //placeholder
 
 #define motorInterfaceType 1 // Using driver with step/dir interface
 
@@ -49,14 +50,14 @@ AccelStepper BRstepper(motorInterfaceType, BRStep, BRDir);  // Back Right
 AccelStepper BLstepper(motorInterfaceType, BLStep, BLDir);  // Back Left
 AccelStepper FArmStepper(motorInterfaceType, FArmStep, FArmDir); // Front Arm (unused here)
 AccelStepper BArmStepper(motorInterfaceType, BArmStep, BArmDir); // Back Arm (unused here)
-AccelStepper CrslStepper(AccelStepper::FULL4WIRE, 30,26,28,24); // Stepper for the carousel 
+AccelStepper CrslStepper(AccelStepper::FULL4WIRE, IN1,IN2,IN3,IN4); // Stepper for the carousel 
 
 // ===================== Servo Instances =======================
-Servo ejectorServo;
-Servo servo1;
-Servo servo2;
-Servo servo3;
-Servo servo4;
+Servo ejectorServo;     // Ejector Servo
+Servo FrontFlapServo;   // Front Flap Servo
+Servo BackFlapServo;    // Back Flap Servo
+Servo FrontArmServo;    // Front Arm Servo
+Servo BackArmServo;     // Back Arm Servo
 
 // ===================== Motion Parameters =====================
 const float wheelDiameterMM = 80.0;                 // Wheel diameter in mm
@@ -65,7 +66,7 @@ const float wheelCircumference = PI * wheelDiameterMM; // Circumference = π * d
 const float stepsPerMM = stepsPerRevolution / wheelCircumference; // Steps per mm of travel
 
 int maxSpeed = 2000; // Maximum speed for steppers
-int accel = 3500;    // Acceleration for steppers
+int maxAccel = 5000;    // Acceleration for steppers
 
 // ===================== Timing Variables =======================
 unsigned long nowTime = 0;
@@ -90,6 +91,8 @@ int FrontRight = -1;
 int FrontLeft  = -1;
 int BackRight  = 1;
 int BackLeft   = -1;
+int FArm = 1;
+int BArm = 1;
 
 // ===================== State Machine for Movements =====================
 enum MovementState {
@@ -123,10 +126,10 @@ void moveDistance(float forwardMM, float strafeMM) {
   BLstepper.move(BackLeft * blSteps);
 
   // Set speed and acceleration for each motor
-  FRstepper.setMaxSpeed(maxSpeed); FRstepper.setAcceleration(accel);
-  FLstepper.setMaxSpeed(maxSpeed); FLstepper.setAcceleration(accel);
-  BRstepper.setMaxSpeed(maxSpeed); BRstepper.setAcceleration(accel);
-  BLstepper.setMaxSpeed(maxSpeed); BLstepper.setAcceleration(accel);
+  FRstepper.setMaxSpeed(maxSpeed); FRstepper.setAcceleration(maxAccel);
+  FLstepper.setMaxSpeed(maxSpeed); FLstepper.setAcceleration(maxAccel);
+  BRstepper.setMaxSpeed(maxSpeed); BRstepper.setAcceleration(maxAccel);
+  BLstepper.setMaxSpeed(maxSpeed); BLstepper.setAcceleration(maxAccel);
 }
 
 // Runs all steppers each loop iteration to progress toward target positions
@@ -226,10 +229,10 @@ void setup() {
   ejectorServo.attach(11);
   ejectorServo.write(180);
 
-  servo1.attach(servoPin1);
-  servo2.attach(servoPin2);
-  servo3.attach(servoPin3);
-  servo4.attach(servoPin4);
+  FrontFlapServo.attach(FFlapServoPin);
+  BackFlapServo.attach(BFlapServoPin);
+  FrontArmServo.attach(FArmServo);
+  BackArmServo.attach(BArmServo);
 
   // Set all enable pins to OUTPUT mode
   pinMode(FREn, OUTPUT); pinMode(FLEn, OUTPUT);
@@ -242,10 +245,10 @@ void setup() {
   digitalWrite(FArmEn, LOW); digitalWrite(BArmEn, LOW);
 
   // Configure speed and acceleration for each motor
-  FRstepper.setMaxSpeed(maxSpeed); FRstepper.setAcceleration(accel);
-  FLstepper.setMaxSpeed(maxSpeed); FLstepper.setAcceleration(accel);
-  BRstepper.setMaxSpeed(maxSpeed); BRstepper.setAcceleration(accel);
-  BLstepper.setMaxSpeed(maxSpeed); BLstepper.setAcceleration(accel);
+  FRstepper.setMaxSpeed(maxSpeed); FRstepper.setAcceleration(maxAccel);
+  FLstepper.setMaxSpeed(maxSpeed); FLstepper.setAcceleration(maxAccel);
+  BRstepper.setMaxSpeed(maxSpeed); BRstepper.setAcceleration(maxAccel);
+  BLstepper.setMaxSpeed(maxSpeed); BLstepper.setAcceleration(maxAccel);
   FArmStepper.setMaxSpeed(maxSpeedArms); 
   FArmStepper.setAcceleration(accelArms);
   BArmStepper.setMaxSpeed(maxSpeedArms); 
@@ -344,8 +347,8 @@ void loop() {
   {
     if(nowTime - gateTimePrev >= lockDelay)
     {
-      servo1.write(angle);
-      servo2.write(180-angle);
+      FrontFlapServo.write(angle);
+      BackFlapServo.write(180-angle);
       gateTimePrev = nowTime;
     }
   }
@@ -355,8 +358,8 @@ void loop() {
     {
       if(nowTime-gateTimePrev >= lockDelay)
       {
-        servo1.write(angle);
-        servo2.write(180-angle);
+        FrontFlapServo.write(angle);
+        BackFlapServo.write(180-angle);
         gateTimePrev = nowTime;
       }
     }*/
