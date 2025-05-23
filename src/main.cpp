@@ -65,7 +65,7 @@ const float stepsPerRevolution = 200 * 4;           // 200 steps/rev * 4 (micros
 const float wheelCircumference = PI * wheelDiameterMM; // Circumference = π * diameter
 const float stepsPerMM = stepsPerRevolution / wheelCircumference; // Steps per mm of travel
 
-int maxSpeed = 2000; // Maximum speed for steppers
+int maxSpeed = 200; // Maximum speed for steppers
 int maxAccel = 5000;    // Acceleration for steppers
 
 int armAngle = 0;
@@ -82,11 +82,16 @@ unsigned long pistonLast = 0;
 const int pistonDelay = 1000;
 const int carouselDelay = 5000;
 
+unsigned long armTimePrev = 0;
+const int armDelay = 2000;
+
 // ===================== General Variables ======================
 int carouselCycles = 0;
 bool carouselEject = false;
 int pistonPosition = 180;
 int carouselState = 0; //0 = move, 1 = extend, 2 = retract;
+
+bool moving = true;
 
 // ===================== Direction Settings =====================
 // Use 1 or -1 to reverse motor direction to match real-world wiring
@@ -283,6 +288,19 @@ void loop() {
   ejectorServo.write(pistonPosition);
 
   nowTime = millis(); // Current time in ms
+
+  if (nowTime - armTimePrev >= armDelay)
+  {
+    armTimePrev = nowTime;
+    if (moving)
+    {
+      moveArmSystem(45);
+    }
+    else
+    {
+      moveArmSystem(-45);
+    }
+  }
 
   //------------------------------------------ Sweep Code to test Aidans gate servos
   /*
