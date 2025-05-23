@@ -37,10 +37,6 @@
 #define FArmServoPin 4      // Arm Servo Pin
 #define BArmServoPin 3       // Arm Servo Pin
 
-//max vel and max accel
-#define maxSpeedArms 500
-#define accelArms 1750
-
 #define motorInterfaceType 1 // Using driver with step/dir interface
 
 // ===================== Stepper Motor Instances =====================
@@ -309,12 +305,12 @@ void setup() {
   FLstepper.setMaxSpeed(maxSpeed); FLstepper.setAcceleration(maxAccel);
   BRstepper.setMaxSpeed(maxSpeed); BRstepper.setAcceleration(maxAccel);
   BLstepper.setMaxSpeed(maxSpeed); BLstepper.setAcceleration(maxAccel);
-  FArmStepper.setMaxSpeed(maxSpeedArms); 
-  FArmStepper.setAcceleration(accelArms);
+  FArmStepper.setMaxSpeed(maxArmSpeed); 
+  FArmStepper.setAcceleration(maxAccel);
   FArmStepper.setCurrentPosition(0);
-  BArmStepper.setMaxSpeed(maxSpeedArms); 
+  BArmStepper.setMaxSpeed(maxArmSpeed); 
   BArmStepper.setCurrentPosition(0);
-  BArmStepper.setAcceleration(accelArms);
+  BArmStepper.setAcceleration(maxAccel);
   CrslStepper.setMaxSpeed(600);
   CrslStepper.setSpeed(100);
 
