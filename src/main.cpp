@@ -56,8 +56,8 @@ AccelStepper CrslStepper(AccelStepper::FULL4WIRE, IN1,IN2,IN3,IN4); // Stepper f
 Servo ejectorServo;     // Ejector Servo
 Servo FrontFlapServo;   // Front Flap Servo
 Servo BackFlapServo;    // Back Flap Servo
-Servo FrontArmServo;    // Front Arm Servo
-Servo BackArmServo;     // Back Arm Servo
+SmoothServoMover FrontServoMover;
+SmoothServoMover BackServoMover;
 
 // ===================== Motion Parameters =====================
 const float wheelDiameterMM = 80.0;                 // Wheel diameter in mm
@@ -84,6 +84,7 @@ const int carouselDelay = 5000;
 
 unsigned long armTimePrev = 0;
 const int armDelay = 2000;
+const int servoDelay = 10;
 
 // ===================== General Variables ======================
 int carouselCycles = 0;
@@ -211,7 +212,51 @@ void carouselHandler()
   }
 }
 
-// =================== Angle function ====================
+// =================== Servo Smoother ====================
+struct SmoothServoMover {
+  Servo* servo;
+  int currentAngle = 90;
+  int targetAngle = 90;
+  unsigned long lastMoveTime = 0;
+  bool active = false;
+
+  void attach(Servo& s, int pin, int initialAngle) {
+    servo = &s;
+    servo->attach(pin);
+    currentAngle = initialAngle;
+    targetAngle = initialAngle;
+    servo->write(initialAngle);
+  }
+
+   void moveTo(int angle) {
+    targetAngle = angle;
+    active = true;
+    lastMoveTime = millis();
+  }
+
+  void update() {
+    if (!active) return;
+
+    unsigned long t = millis();
+    if (t - lastMoveTime >= servoDelay) {
+      if (currentAngle < targetAngle) currentAngle++;
+      else if (currentAngle > targetAngle) currentAngle--;
+
+      servo->write(currentAngle);
+      lastMoveTime = t;
+
+      if (currentAngle == targetAngle) {
+        active = false;
+      }
+    }
+  }
+
+    bool isMoving() {
+    return active;
+  }
+};
+
+// =================== Angle Calc ========================
 long angleToSteps(float angle) {
   return round((angle / 360.0) * stepsPerRevolution);
 }
@@ -224,14 +269,13 @@ void moveArmSystem(float angleDegrees) {
   FArmStepper.move(Steps);
   BArmStepper.move(Steps);
 
-  // Set servos: rotate opposite direction
+  // Move servos smoothly in opposite directions
   if (angleDegrees > 0) {
-    // Front going down, back going up
-    FrontArmServo.write(170);  // rotate CCW
-    BackArmServo.write(10);  // rotate CW
+    FrontServoMover.moveTo(170);
+    BackServoMover.moveTo(10);
   } else {
-    FrontArmServo.write(10); // rotate CW
-    BackArmServo.write(170);   // rotate CCW
+    FrontServoMover.moveTo(10);
+    BackServoMover.moveTo(170);
   }
 }
 
@@ -242,14 +286,11 @@ void setup() {
   ejectorServo.attach(11);
   ejectorServo.write(180);
 
-  // Initialize servo positions
-  FrontArmServo.write(0);
-  BackArmServo.write(0);
-
   FrontFlapServo.attach(FFlapServoPin);
   BackFlapServo.attach(BFlapServoPin);
-  FrontArmServo.attach(FArmServoPin);
-  BackArmServo.attach(BArmServoPin);
+
+  FrontServoMover.attach(*(new Servo), FArmServoPin, 90);
+  BackServoMover.attach(*(new Servo), BArmServoPin, 90);
 
   // Set all enable pins to OUTPUT mode
   pinMode(FREn, OUTPUT); pinMode(FLEn, OUTPUT);
@@ -286,9 +327,13 @@ void loop() {
   carouselHandler();
   ejectorServo.write(pistonPosition);
 
+  // Update smooth servos
+  FrontServoMover.update();
+  BackServoMover.update();
+
   nowTime = millis(); // Current time in ms
 
-switch (armState) {
+  switch (armState) {
     case 0:
       moveArmSystem(170);
       armState = 1;
@@ -296,9 +341,13 @@ switch (armState) {
       break;
 
     case 1:
-      if (nowTime - armTimePrev >= armDelay &&
-          !FArmStepper.isRunning() && !BArmStepper.isRunning()) {
+      if ((nowTime - armTimePrev >= armDelay) &&
+          !FArmStepper.isRunning() &&
+          !BArmStepper.isRunning() &&
+          !FrontServoMover.isMoving() &&
+          !BackServoMover.isMoving()) {
         armState = 2;
+        armTimePrev = nowTime;
       }
       break;
 
@@ -309,14 +358,17 @@ switch (armState) {
       break;
 
     case 3:
-      if (nowTime - armTimePrev >= armDelay &&
-          !FArmStepper.isRunning() && !BArmStepper.isRunning()) {
+      if ((nowTime - armTimePrev >= armDelay) &&
+          !FArmStepper.isRunning() &&
+          !BArmStepper.isRunning() &&
+          !FrontServoMover.isMoving() &&
+          !BackServoMover.isMoving()) {
         armState = 4;
       }
       break;
 
     case 4:
-      // Stop moving forever, do nothing
+      // Stop forever
       break;
   }
 
