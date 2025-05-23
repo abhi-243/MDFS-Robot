@@ -49,7 +49,7 @@ AccelStepper BArmStepper(motorInterfaceType, BArmStep, BArmDir); // Back Arm (un
 AccelStepper CrslStepper(AccelStepper::FULL4WIRE, IN1,IN2,IN3,IN4); // Stepper for the carousel 
 
 // =================== Servo Smoother ====================
-const int servoRPM = 89;
+const int servoRPM = 13;
 const float servoDelay = 60000.0 / (servoRPM * 180.0); // in milliseconds
 struct SmoothServoMover {
   Servo* servo;
