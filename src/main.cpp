@@ -9,7 +9,7 @@
 
 #define FLStep 47    // Front Left Step pin
 #define FLDir 45     // Front Left Direction pin
-#define FLEn 43      // Front Left Enable pin
+#define FLEn 43      // Fxront Left Enable pin
 
 #define BRStep 53    // Back Right Step pin
 #define BRDir 51     // Back Right Direction pin
@@ -31,6 +31,8 @@
 #define servoPin2 4
 #define servoPin3 10
 #define servoPin4 3
+#define servoArmPin1 1
+#define servoArmPin2 5
 
 //max vel and accel
 #define maxSpeedArms 500
@@ -57,6 +59,8 @@ Servo servo1;
 Servo servo2;
 Servo servo3;
 Servo servo4;
+Servo servoArm1;
+Servo servoArm2;
 
 // ===================== Motion Parameters =====================
 const float wheelDiameterMM = 80.0;                 // Wheel diameter in mm
@@ -178,8 +182,9 @@ void carouselHandler()
     case 2:
     if(nowTime - pistonLast > pistonDelay)
     {
-      pistonPosition = 90;
+      pistonPosition = 100;
       pistonLast = nowTime;
+
       carouselState = 3;
     }
     break;
@@ -219,6 +224,11 @@ void frontArmPosition (float angleFrontDegrees){
  
 }
 
+void moveArms()
+{
+  
+}
+
 // ===================== Setup Function =====================
 void setup() {
   Serial.begin(115200); // Start serial communication for debugging
@@ -230,6 +240,9 @@ void setup() {
   servo2.attach(servoPin2);
   servo3.attach(servoPin3);
   servo4.attach(servoPin4);
+
+  servoArm1.attach(servoArmPin1);
+  servoArm2.attach(servoArmPin2);
 
   // Set all enable pins to OUTPUT mode
   pinMode(FREn, OUTPUT); pinMode(FLEn, OUTPUT);
