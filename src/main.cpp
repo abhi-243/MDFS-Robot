@@ -9,7 +9,7 @@
 
 #define FLStep 47    // Front Left Step pin
 #define FLDir 45     // Front Left Direction pin
-#define FLEn 43      // Fxront Left Enable pin
+#define FLEn 43      // Front Left Enable pin
 
 #define BRStep 53    // Back Right Step pin
 #define BRDir 51     // Back Right Direction pin
@@ -276,6 +276,7 @@ void loop() {
   nowTime = millis(); // Current time in ms
 
   // State machine for sequencing robot movements
+  /*
   switch (currentState) {
     case MOVE_RIGHT:
       if (!movementStarted) {
@@ -347,29 +348,30 @@ void loop() {
       // All motion complete. Idle state.
       break;
   }
+  */
 
   //------------------------------------------ Sweep Code to test Aidans gate servos
-  /*for(int angle = 90; angle >= 180; angle--)
+  for(int angle = 0; angle >= 110; angle--)
   {
     if(nowTime - gateTimePrev >= lockDelay)
     {
       FrontFlapServo.write(angle);
-      BackFlapServo.write(180-angle);
+      BackFlapServo.write(110-angle);
       gateTimePrev = nowTime;
     }
   }
 
     gateTimePrev = nowTime;
-    for(int angle = 90; angle <= 180; angle++)
+    for(int angle = 0; angle <= 110; angle++)
     {
       if(nowTime-gateTimePrev >= lockDelay)
       {
         FrontFlapServo.write(angle);
-        BackFlapServo.write(180-angle);
+        BackFlapServo.write(110-angle);
         gateTimePrev = nowTime;
       }
-    }*/
-  //---------------------------------------------------End Sweep test
+    }
+  //-------------------------------------------End Sweep test
 
   delayMicroseconds(100); // Brief pause to avoid CPU overload
 }
