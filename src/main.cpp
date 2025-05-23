@@ -34,7 +34,7 @@
 
 #define FFlapServoPin 5   // Flap Servo Pin
 #define BFlapServoPin 6   // Flap Servo Pin
-#define FArmServoPin 10      // Arm Servo Pin
+#define FArmServoPin 4      // Arm Servo Pin
 #define BArmServoPin 3       // Arm Servo Pin
 
 //max vel and max accel
@@ -214,12 +214,11 @@ long angleToSteps(float angle) {
 
 // =================== Move Arms ======================
 void moveArmSystem(float angleDegrees) {
-  long frontSteps = angleToSteps(angleDegrees);
-  long backSteps = frontSteps;
+  long Steps = angleToSteps(angleDegrees);
 
   // Move steppers
-  FArmStepper.move(frontSteps);
-  BArmStepper.move(backSteps);
+  FArmStepper.move(Steps);
+  BArmStepper.move(Steps);
 
   // Set servos: rotate opposite direction
   if (angleDegrees > 0) {
