@@ -32,8 +32,8 @@
 #define IN3 28
 #define IN4 24
 
-#define FFlapServoPin 9   // Flap Servo Pin
-#define BFlapServoPin 4   // Flap Servo Pin
+#define FFlapServoPin 5   // Flap Servo Pin
+#define BFlapServoPin 6   // Flap Servo Pin
 #define FArmServoPin 10      // Arm Servo Pin
 #define BArmServoPin 3       // Arm Servo Pin
 
@@ -68,11 +68,14 @@ const float stepsPerMM = stepsPerRevolution / wheelCircumference; // Steps per m
 int maxSpeed = 2000; // Maximum speed for steppers
 int maxAccel = 5000;    // Acceleration for steppers
 
+int armAngle = 0;
+bool armFloppers = false;
+
 // ===================== Timing Variables =======================
 unsigned long nowTime = 0;
 
 unsigned long gateTimePrev = 0; // for Aidan's servo gate locks
-const int lockDelay = 50;
+const int lockDelay = 5;
 
 unsigned long carouselRotPrev = 0;
 unsigned long pistonLast = 0;
@@ -199,33 +202,39 @@ void carouselHandler()
   }
 }
 
-// ===================Back arm function ====================
-
-void backArmPosition (float angleBackDegrees){
-  // Clamp angle
-  if (angleBackDegrees < 0) angleBackDegrees += 360;
-  if (angleBackDegrees >= 360) angleBackDegrees -= 360;
- 
-  long targetStepsBackArm = (angleBackDegrees / 360.0) * stepsPerRevolution;
-  BArmStepper.move(targetStepsBackArm);
- 
+// =================== Angle function ====================
+long angleToSteps(float angle) {
+  return round((angle / 360.0) * stepsPerRevolution);
 }
 
-//===================== Front arm function
+// =================== Move Arms ======================
+void moveArmSystem(float angleDegrees) {
+  long frontSteps = angleToSteps(angleDegrees);
+  long backSteps = -frontSteps;
 
-void frontArmPosition (float angleFrontDegrees){
-  // Clamp angle
-  if (angleFrontDegrees < 0) angleFrontDegrees += 360;
-  if (angleFrontDegrees >= 360) angleFrontDegrees -= 360;
- 
-  long targetStepsFrontArm = (angleFrontDegrees / 360.0) * stepsPerRevolution;
-  FArmStepper.move(targetStepsFrontArm);
- 
-}
+  // Move steppers
+  FArmStepper.move(frontSteps);
+  BArmStepper.move(backSteps);
 
-void moveArms()
-{
-  
+  // Set servos: rotate opposite direction
+  if (angleDegrees > 0) {
+    // Front going down, back going up
+    FrontArmServo.write(60);  // rotate CCW
+    BackArmServo.write(120);  // rotate CW
+  } else {
+    FrontArmServo.write(120); // rotate CW
+    BackArmServo.write(60);   // rotate CCW
+  }
+
+  // While steppers are moving
+  while (FArmStepper.isRunning() || BArmStepper.isRunning()) {
+    FArmStepper.run();
+    BArmStepper.run();
+  }
+
+  // Stop servos when steppers stop
+  FrontArmServo.write(90);
+  BackArmServo.write(90);
 }
 
 // ===================== Setup Function =====================
@@ -275,102 +284,31 @@ void loop() {
 
   nowTime = millis(); // Current time in ms
 
-  // State machine for sequencing robot movements
-  /*
-  switch (currentState) {
-    case MOVE_RIGHT:
-      if (!movementStarted) {
-        moveDistance(0, -170); // Strafe right by 170 mm
-        movementStarted = true;
-      }
-      if (!steppersAreRunning()) {
-        currentState = WAIT1; // Go to wait state
-        movementStartTime = nowTime;
-        movementStarted = false;
-      }
-      break;
-
-    case WAIT1:
-      // Wait 500ms after previous move before continuing
-      if (nowTime - movementStartTime >= 500) {
-        currentState = MOVE_LEFT;
-      }
-      break;
-
-    case MOVE_LEFT:
-      if (!movementStarted) {
-        moveDistance(0, -160); // Strafe left by 160 mm (typo: maybe should be positive?)
-        movementStarted = true;
-      }
-      if (!steppersAreRunning()) {
-        currentState = WAIT2;
-        movementStartTime = nowTime;
-        movementStarted = false;
-      }
-      break;
-
-    case WAIT2:
-      if (nowTime - movementStartTime >= 500) {
-        currentState = MOVE_FORWARD1;
-      }
-      break;
-
-    case MOVE_FORWARD1:
-      if (!movementStarted) {
-        moveDistance(900, 0); // Move forward by 900 mm
-        movementStarted = true;
-      }
-      if (!steppersAreRunning()) {
-        currentState = WAIT3;
-        movementStartTime = nowTime;
-        movementStarted = false;
-      }
-      break;
-
-    case WAIT3:
-      if (nowTime - movementStartTime >= 1000) {
-        currentState = MOVE_FORWARD2;
-      }
-      break;
-
-    case MOVE_FORWARD2:
-      if (!movementStarted) {
-        moveDistance(800, 0); // Move forward by another 800 mm
-        movementStarted = true;
-      }
-      if (!steppersAreRunning()) {
-        currentState = DONE;
-        movementStarted = false;
-      }
-      break;
-
-    case DONE:
-      // All motion complete. Idle state.
-      break;
-  }
-  */
-
   //------------------------------------------ Sweep Code to test Aidans gate servos
-  for(int angle = 0; angle >= 110; angle--)
+  /*
+  if(nowTime - gateTimePrev >= lockDelay)
   {
-    if(nowTime - gateTimePrev >= lockDelay)
+    if(armFloppers == false)
     {
-      FrontFlapServo.write(angle);
-      BackFlapServo.write(110-angle);
-      gateTimePrev = nowTime;
-    }
-  }
-
-    gateTimePrev = nowTime;
-    for(int angle = 0; angle <= 110; angle++)
-    {
-      if(nowTime-gateTimePrev >= lockDelay)
+      armAngle = armAngle + 1;
+      if(armAngle >= 165)
       {
-        FrontFlapServo.write(angle);
-        BackFlapServo.write(110-angle);
-        gateTimePrev = nowTime;
+        armFloppers = true;
       }
     }
+    else{
+      armAngle = armAngle -1;
+      if(armAngle <= 0)
+      {
+        armFloppers = false;
+      }
+    }
+    gateTimePrev = nowTime;
+  }
+
+  BackFlapServo.write(armAngle);
+  FrontFlapServo.write(165 - armAngle);
+  */
   //-------------------------------------------End Sweep test
 
   delayMicroseconds(100); // Brief pause to avoid CPU overload
