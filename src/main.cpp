@@ -223,11 +223,11 @@ void moveArmSystem(float angleDegrees) {
   // Set servos: rotate opposite direction
   if (angleDegrees > 0) {
     // Front going down, back going up
-    FrontArmServo.write(60);  // rotate CCW
-    BackArmServo.write(120);  // rotate CW
+    FrontArmServo.write(angleDegrees);  // rotate CCW
+    BackArmServo.write(-angleDegrees);  // rotate CW
   } else {
-    FrontArmServo.write(120); // rotate CW
-    BackArmServo.write(60);   // rotate CCW
+    FrontArmServo.write(-angleDegrees); // rotate CW
+    BackArmServo.write(angleDegrees);   // rotate CCW
   }
 
   // While steppers are moving
@@ -235,10 +235,6 @@ void moveArmSystem(float angleDegrees) {
     FArmStepper.run();
     BArmStepper.run();
   }
-
-  // Stop servos when steppers stop
-  FrontArmServo.write(90);
-  BackArmServo.write(90);
 }
 
 // ===================== Setup Function =====================
