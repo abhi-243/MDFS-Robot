@@ -215,7 +215,7 @@ long angleToSteps(float angle) {
 // =================== Move Arms ======================
 void moveArmSystem(float angleDegrees) {
   long frontSteps = angleToSteps(angleDegrees);
-  long backSteps = -frontSteps;
+  long backSteps = frontSteps;
 
   // Move steppers
   FArmStepper.move(frontSteps);
