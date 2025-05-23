@@ -9,7 +9,7 @@
 
 #define FLStep 47    // Front Left Step pin
 #define FLDir 45     // Front Left Direction pin
-#define FLEn 43      // Front Left Enable pin
+#define FLEn 43      // Fxront Left Enable pin
 
 #define BRStep 53    // Back Right Step pin
 #define BRDir 51     // Back Right Direction pin
@@ -34,8 +34,8 @@
 
 #define FFlapServoPin 9   // Flap Servo Pin
 #define BFlapServoPin 4   // Flap Servo Pin
-#define FArmServo 10      // Arm Servo Pin
-#define BArmServo 3       // Arm Servo Pin
+#define FArmServoPin 10      // Arm Servo Pin
+#define BArmServoPin 3       // Arm Servo Pin
 
 //max vel and max accel
 #define maxSpeedArms 500
@@ -181,8 +181,9 @@ void carouselHandler()
     case 2:
     if(nowTime - pistonLast > pistonDelay)
     {
-      pistonPosition = 90;
+      pistonPosition = 100;
       pistonLast = nowTime;
+
       carouselState = 3;
     }
     break;
@@ -222,6 +223,11 @@ void frontArmPosition (float angleFrontDegrees){
  
 }
 
+void moveArms()
+{
+  
+}
+
 // ===================== Setup Function =====================
 void setup() {
   Serial.begin(115200); // Start serial communication for debugging
@@ -231,8 +237,8 @@ void setup() {
 
   FrontFlapServo.attach(FFlapServoPin);
   BackFlapServo.attach(BFlapServoPin);
-  FrontArmServo.attach(FArmServo);
-  BackArmServo.attach(BArmServo);
+  FrontArmServo.attach(FArmServoPin);
+  BackArmServo.attach(BArmServoPin);
 
   // Set all enable pins to OUTPUT mode
   pinMode(FREn, OUTPUT); pinMode(FLEn, OUTPUT);
