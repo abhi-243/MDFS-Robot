@@ -167,16 +167,24 @@ void carouselHandler()
     }
     break;
 
-    case 1:
-    if(nowTime - pistonLast > pistonDelay)
+    case 1: //Pre piston delay based on rotate speed and steps required
+    if(nowTime - pistonLast >= 2780)
     {
-      pistonPosition = 90;
       pistonLast = nowTime;
       carouselState = 2;
     }
     break;
 
     case 2:
+    if(nowTime - pistonLast > pistonDelay)
+    {
+      pistonPosition = 90;
+      pistonLast = nowTime;
+      carouselState = 3;
+    }
+    break;
+
+    case 3:
     if(nowTime - pistonLast > pistonDelay)
     {
       pistonPosition = 180;
