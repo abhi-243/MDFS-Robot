@@ -83,7 +83,7 @@ const int pistonDelay = 1000;
 const int carouselDelay = 5000;
 
 unsigned long armTimePrev = 0;
-const int armDelay = 1000;
+const int armDelay = 2000;
 
 // ===================== General Variables ======================
 int carouselCycles = 0;
@@ -91,7 +91,9 @@ bool carouselEject = false;
 int pistonPosition = 180;
 int carouselState = 0; //0 = move, 1 = extend, 2 = retract;
 
-bool moving = true;
+int armState = 0;
+
+bool hasMoved = false;
 
 // ===================== Direction Settings =====================
 // Use 1 or -1 to reverse motor direction to match real-world wiring
@@ -146,6 +148,8 @@ void runAllSteppers() {
   FLstepper.run();
   BRstepper.run();
   BLstepper.run();
+  FArmStepper.run();
+  BArmStepper.run();
 }
 
 // Check if any of the steppers are still running a motion
@@ -223,17 +227,11 @@ void moveArmSystem(float angleDegrees) {
   // Set servos: rotate opposite direction
   if (angleDegrees > 0) {
     // Front going down, back going up
-    FrontArmServo.write(angleDegrees);  // rotate CCW
-    BackArmServo.write(-angleDegrees);  // rotate CW
+    FrontArmServo.write(170);  // rotate CCW
+    BackArmServo.write(10);  // rotate CW
   } else {
-    FrontArmServo.write(-angleDegrees); // rotate CW
-    BackArmServo.write(angleDegrees);   // rotate CCW
-  }
-
-  // While steppers are moving
-  while (FArmStepper.isRunning() || BArmStepper.isRunning()) {
-    FArmStepper.run();
-    BArmStepper.run();
+    FrontArmServo.write(10); // rotate CW
+    BackArmServo.write(170);   // rotate CCW
   }
 }
 
@@ -243,6 +241,10 @@ void setup() {
 
   ejectorServo.attach(11);
   ejectorServo.write(180);
+
+  // Initialize servo positions
+  FrontArmServo.write(0);
+  BackArmServo.write(0);
 
   FrontFlapServo.attach(FFlapServoPin);
   BackFlapServo.attach(BFlapServoPin);
@@ -266,7 +268,9 @@ void setup() {
   BLstepper.setMaxSpeed(maxSpeed); BLstepper.setAcceleration(maxAccel);
   FArmStepper.setMaxSpeed(maxSpeedArms); 
   FArmStepper.setAcceleration(accelArms);
+  FArmStepper.setCurrentPosition(0);
   BArmStepper.setMaxSpeed(maxSpeedArms); 
+  BArmStepper.setCurrentPosition(0);
   BArmStepper.setAcceleration(accelArms);
   CrslStepper.setMaxSpeed(600);
   CrslStepper.setSpeed(100);
@@ -284,17 +288,36 @@ void loop() {
 
   nowTime = millis(); // Current time in ms
 
-  if (nowTime - armTimePrev >= armDelay)
-  {
-    armTimePrev = nowTime;
-    if (moving)
-    {
-      moveArmSystem(180);
-    }
-    else
-    {
-      moveArmSystem(-180);
-    }
+switch (armState) {
+    case 0:
+      moveArmSystem(170);
+      armState = 1;
+      armTimePrev = nowTime;
+      break;
+
+    case 1:
+      if (nowTime - armTimePrev >= armDelay &&
+          !FArmStepper.isRunning() && !BArmStepper.isRunning()) {
+        armState = 2;
+      }
+      break;
+
+    case 2:
+      moveArmSystem(-170);
+      armState = 3;
+      armTimePrev = nowTime;
+      break;
+
+    case 3:
+      if (nowTime - armTimePrev >= armDelay &&
+          !FArmStepper.isRunning() && !BArmStepper.isRunning()) {
+        armState = 4;
+      }
+      break;
+
+    case 4:
+      // Stop moving forever, do nothing
+      break;
   }
 
   //------------------------------------------ Sweep Code to test Aidans gate servos
