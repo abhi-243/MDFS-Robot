@@ -83,7 +83,7 @@ const int pistonDelay = 1000;
 const int carouselDelay = 5000;
 
 unsigned long armTimePrev = 0;
-const int armDelay = 2000;
+const int armDelay = 1000;
 
 // ===================== General Variables ======================
 int carouselCycles = 0;
@@ -293,11 +293,11 @@ void loop() {
     armTimePrev = nowTime;
     if (moving)
     {
-      moveArmSystem(45);
+      moveArmSystem(180);
     }
     else
     {
-      moveArmSystem(-45);
+      moveArmSystem(-180);
     }
   }
 
