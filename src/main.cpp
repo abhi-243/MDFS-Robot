@@ -52,6 +52,52 @@ AccelStepper FArmStepper(motorInterfaceType, FArmStep, FArmDir); // Front Arm (u
 AccelStepper BArmStepper(motorInterfaceType, BArmStep, BArmDir); // Back Arm (unused here)
 AccelStepper CrslStepper(AccelStepper::FULL4WIRE, IN1,IN2,IN3,IN4); // Stepper for the carousel 
 
+// =================== Servo Smoother ====================
+const int servoRPM = 89;
+const float servoDelay = 60000.0 / (servoRPM * 180.0); // in milliseconds
+struct SmoothServoMover {
+  Servo* servo;
+  int currentAngle = 90;
+  int targetAngle = 90;
+  unsigned long lastMoveTime = 0;
+  bool active = false;
+
+  void attach(Servo& s, int pin, int initialAngle) {
+    servo = &s;
+    servo->attach(pin);
+    currentAngle = initialAngle;
+    targetAngle = initialAngle;
+    servo->write(initialAngle);
+  }
+
+   void moveTo(int angle) {
+    targetAngle = angle;
+    active = true;
+    lastMoveTime = millis();
+  }
+
+  void update(unsigned long nowTime) {
+    if (!active) return;
+
+    if (nowTime - lastMoveTime >= servoDelay) {
+      lastMoveTime = nowTime;
+
+      if (currentAngle < targetAngle) currentAngle++;
+      else if (currentAngle > targetAngle) currentAngle--;
+
+      servo->write(currentAngle);
+
+      if (currentAngle == targetAngle) {
+        active = false;
+      }
+    }
+  }
+
+    bool isMoving() {
+    return active;
+  }
+};
+
 // ===================== Servo Instances =======================
 Servo ejectorServo;     // Ejector Servo
 Servo FrontFlapServo;   // Front Flap Servo
@@ -66,6 +112,7 @@ const float wheelCircumference = PI * wheelDiameterMM; // Circumference = π * d
 const float stepsPerMM = stepsPerRevolution / wheelCircumference; // Steps per mm of travel
 
 int maxSpeed = 200; // Maximum speed for steppers
+int maxArmSpeed = 89; //Maximum speed for arm steppers
 int maxAccel = 5000;    // Acceleration for steppers
 
 int armAngle = 0;
@@ -84,7 +131,6 @@ const int carouselDelay = 5000;
 
 unsigned long armTimePrev = 0;
 const int armDelay = 2000;
-const int servoDelay = 10;
 
 // ===================== General Variables ======================
 int carouselCycles = 0;
@@ -212,50 +258,6 @@ void carouselHandler()
   }
 }
 
-// =================== Servo Smoother ====================
-struct SmoothServoMover {
-  Servo* servo;
-  int currentAngle = 90;
-  int targetAngle = 90;
-  unsigned long lastMoveTime = 0;
-  bool active = false;
-
-  void attach(Servo& s, int pin, int initialAngle) {
-    servo = &s;
-    servo->attach(pin);
-    currentAngle = initialAngle;
-    targetAngle = initialAngle;
-    servo->write(initialAngle);
-  }
-
-   void moveTo(int angle) {
-    targetAngle = angle;
-    active = true;
-    lastMoveTime = millis();
-  }
-
-  void update() {
-    if (!active) return;
-
-    unsigned long t = millis();
-    if (t - lastMoveTime >= servoDelay) {
-      if (currentAngle < targetAngle) currentAngle++;
-      else if (currentAngle > targetAngle) currentAngle--;
-
-      servo->write(currentAngle);
-      lastMoveTime = t;
-
-      if (currentAngle == targetAngle) {
-        active = false;
-      }
-    }
-  }
-
-    bool isMoving() {
-    return active;
-  }
-};
-
 // =================== Angle Calc ========================
 long angleToSteps(float angle) {
   return round((angle / 360.0) * stepsPerRevolution);
@@ -323,15 +325,14 @@ void setup() {
 
 // ===================== Main Loop =====================
 void loop() {
+  nowTime = millis(); // Current time in ms
   runAllSteppers(); // Continuously run all motors
   carouselHandler();
   ejectorServo.write(pistonPosition);
 
   // Update smooth servos
-  FrontServoMover.update();
-  BackServoMover.update();
-
-  nowTime = millis(); // Current time in ms
+  FrontServoMover.update(nowTime);
+  BackServoMover.update(nowTime);
 
   switch (armState) {
     case 0:
