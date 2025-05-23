@@ -74,11 +74,15 @@ unsigned long gateTimePrev = 0; // for Aidan's servo gate locks
 const int lockDelay = 50;
 
 unsigned long carouselRotPrev = 0;
-const int carouselDelay = 2000;
+unsigned long pistonLast = 0;
+const int pistonDelay = 1000;
+const int carouselDelay = 5000;
 
 // ===================== General Variables ======================
 int carouselCycles = 0;
 bool carouselEject = false;
+int pistonPosition = 180;
+int carouselState = 0; //0 = move, 1 = extend, 2 = retract;
 
 // ===================== Direction Settings =====================
 // Use 1 or -1 to reverse motor direction to match real-world wiring
@@ -140,44 +144,52 @@ bool steppersAreRunning() {
          BRstepper.isRunning() || BLstepper.isRunning();
 }
 
+// ================================= Carousel control Code ==========================
+
 void carouselHandler()
 {
-  CrslStepper.setSpeed(300);
   CrslStepper.runSpeedToPosition();
+  CrslStepper.setSpeed(300);
 
-  int currAction = 0; // 0 == eject, 1 == rotate
-  switch (currAction)
+  switch(carouselState)
   {
-  case 0:
-    if(carouselEject == true)
-    {
-      if(carouselRotPrev - nowTime >= carouselDelay / 4)
-      {
-        ejectorServo.write(180);
-      }
-      if(carouselRotPrev - nowTime >= carouselDelay / 2)
-      {
-        ejectorServo.write(90);
-        carouselRotPrev = nowTime;
-        currAction = 1;
-      }
-    }
-    else 
-    {
-      currAction = 1;
-    }
-    break;
-  
-  case 1:
-    if(carouselCycles > 0 && carouselRotPrev - nowTime >= carouselDelay)
+    case 0:
+    if(carouselCycles > 0 && (nowTime - carouselRotPrev) >= carouselDelay)
     {
       CrslStepper.move(683);
-      carouselCycles -= carouselCycles;
+      carouselCycles = carouselCycles - 1;
       carouselRotPrev = nowTime;
       if(carouselEject == true)
       {
-        currAction = 0;
+        carouselState = 1;
+        pistonLast = nowTime;
       }
+    }
+    break;
+
+    case 1: //Pre piston delay based on rotate speed and steps required
+    if(nowTime - pistonLast >= 2780)
+    {
+      pistonLast = nowTime;
+      carouselState = 2;
+    }
+    break;
+
+    case 2:
+    if(nowTime - pistonLast > pistonDelay)
+    {
+      pistonPosition = 90;
+      pistonLast = nowTime;
+      carouselState = 3;
+    }
+    break;
+
+    case 3:
+    if(nowTime - pistonLast > pistonDelay)
+    {
+      pistonPosition = 180;
+      carouselRotPrev = nowTime;
+      carouselState = 0;
     }
     break;
   }
@@ -212,6 +224,7 @@ void setup() {
   Serial.begin(115200); // Start serial communication for debugging
 
   ejectorServo.attach(11);
+  ejectorServo.write(180);
 
   servo1.attach(servoPin1);
   servo2.attach(servoPin2);
@@ -238,6 +251,7 @@ void setup() {
   BArmStepper.setMaxSpeed(maxSpeedArms); 
   BArmStepper.setAcceleration(accelArms);
   CrslStepper.setMaxSpeed(600);
+  CrslStepper.setSpeed(100);
 
   //-------------------- CAROUSEL TESTING REMOVE LATER -------------------
   carouselCycles = 3;
@@ -248,6 +262,7 @@ void setup() {
 void loop() {
   runAllSteppers(); // Continuously run all motors
   carouselHandler();
+  ejectorServo.write(pistonPosition);
 
   nowTime = millis(); // Current time in ms
 
