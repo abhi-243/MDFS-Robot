@@ -49,7 +49,7 @@ AccelStepper BArmStepper(motorInterfaceType, BArmStep, BArmDir); // Back Arm (un
 AccelStepper CrslStepper(AccelStepper::FULL4WIRE, IN1,IN2,IN3,IN4); // Stepper for the carousel 
 
 // =================== Servo Smoother ====================
-const int servoRPM = 13;
+const float servoRPM = 4;
 const float servoDelay = 60000.0 / (servoRPM * 180.0); // in milliseconds
 struct SmoothServoMover {
   Servo* servo;
@@ -112,7 +112,7 @@ const float wheelCircumference = PI * wheelDiameterMM; // Circumference = π * d
 const float stepsPerMM = stepsPerRevolution / wheelCircumference; // Steps per mm of travel
 
 int maxSpeed = 200; // Maximum speed for steppers
-int maxArmSpeed = 89; //Maximum speed for arm steppers
+int maxArmSpeed = 45; //Maximum speed for arm steppers
 int maxAccel = 5000;    // Acceleration for steppers
 
 int armAngle = 0;
