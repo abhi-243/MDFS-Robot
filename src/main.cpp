@@ -19,14 +19,6 @@
 #define BLDir 39     // Back Left Direction pin
 #define BLEn 37      // Back Left Enable pin
 
-#define FArmStep 52  // Front Arm Step pin
-#define FArmDir 50   // Front Arm Direction pin
-#define FArmEn 48    // Front Arm Enable pin
-
-#define BArmStep 46  // Back Arm Step pin
-#define BArmDir 44   // Back Arm Direction pin
-#define BArmEn 42    // Back Arm Enable pin
-
 #define IN1 30
 #define IN2 26
 #define IN3 28
@@ -44,8 +36,6 @@ AccelStepper FRstepper(motorInterfaceType, FRStep, FRDir);  // Front Right
 AccelStepper FLstepper(motorInterfaceType, FLStep, FLDir);  // Front Left
 AccelStepper BRstepper(motorInterfaceType, BRStep, BRDir);  // Back Right
 AccelStepper BLstepper(motorInterfaceType, BLStep, BLDir);  // Back Left
-AccelStepper FArmStepper(motorInterfaceType, FArmStep, FArmDir); // Front Arm (unused here)
-AccelStepper BArmStepper(motorInterfaceType, BArmStep, BArmDir); // Back Arm (unused here)
 AccelStepper CrslStepper(AccelStepper::FULL4WIRE, IN1,IN2,IN3,IN4); // Stepper for the carousel 
 
 // =================== Servo Smoother ====================
@@ -148,8 +138,6 @@ int FrontRight = -1;
 int FrontLeft  = -1;
 int BackRight  = 1;
 int BackLeft   = -1;
-int FArm = 1;
-int BArm = 1;
 
 // ===================== State Machine for Movements =====================
 enum MovementState {
@@ -195,8 +183,6 @@ void runAllSteppers() {
   FLstepper.run();
   BRstepper.run();
   BLstepper.run();
-  FArmStepper.run();
-  BArmStepper.run();
 }
 
 // Check if any of the steppers are still running a motion
@@ -268,8 +254,7 @@ void moveArmSystem(float angleDegrees) {
   long Steps = angleToSteps(angleDegrees);
 
   // Move steppers
-  FArmStepper.move(Steps);
-  BArmStepper.move(Steps);
+
 
   // Move servos smoothly in opposite directions
   if (angleDegrees > 0) {
@@ -297,24 +282,16 @@ void setup() {
   // Set all enable pins to OUTPUT mode
   pinMode(FREn, OUTPUT); pinMode(FLEn, OUTPUT);
   pinMode(BREn, OUTPUT); pinMode(BLEn, OUTPUT);
-  pinMode(FArmEn, OUTPUT); pinMode(BArmEn, OUTPUT);
 
   // Enable all motors (LOW signal enables stepper drivers)
   digitalWrite(FREn, LOW); digitalWrite(FLEn, LOW);
   digitalWrite(BREn, LOW); digitalWrite(BLEn, LOW);
-  digitalWrite(FArmEn, LOW); digitalWrite(BArmEn, LOW);
 
   // Configure speed and acceleration for each motor
   FRstepper.setMaxSpeed(maxSpeed); FRstepper.setAcceleration(maxAccel);
   FLstepper.setMaxSpeed(maxSpeed); FLstepper.setAcceleration(maxAccel);
   BRstepper.setMaxSpeed(maxSpeed); BRstepper.setAcceleration(maxAccel);
   BLstepper.setMaxSpeed(maxSpeed); BLstepper.setAcceleration(maxAccel);
-  FArmStepper.setMaxSpeed(maxArmSpeed); 
-  FArmStepper.setAcceleration(maxAccel);
-  FArmStepper.setCurrentPosition(0);
-  BArmStepper.setMaxSpeed(maxArmSpeed); 
-  BArmStepper.setCurrentPosition(0);
-  BArmStepper.setAcceleration(maxAccel);
   CrslStepper.setMaxSpeed(600);
   CrslStepper.setSpeed(100);
 
@@ -343,8 +320,6 @@ void loop() {
 
     case 1:
       if ((nowTime - armTimePrev >= armDelay) &&
-          !FArmStepper.isRunning() &&
-          !BArmStepper.isRunning() &&
           !FrontServoMover.isMoving() &&
           !BackServoMover.isMoving()) {
         armState = 2;
@@ -360,8 +335,6 @@ void loop() {
 
     case 3:
       if ((nowTime - armTimePrev >= armDelay) &&
-          !FArmStepper.isRunning() &&
-          !BArmStepper.isRunning() &&
           !FrontServoMover.isMoving() &&
           !BackServoMover.isMoving()) {
         armState = 4;
