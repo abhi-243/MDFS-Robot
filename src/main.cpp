@@ -31,12 +31,12 @@
 #define IN2 26
 #define IN3 28
 #define IN4 24
-
+/*
 #define FFlapServoPin 9   // Flap Servo Pin
 #define BFlapServoPin 4   // Flap Servo Pin
 #define FArmServoPin 10      // Arm Servo Pin
 #define BArmServoPin 3       // Arm Servo Pin
-
+*/
 //max vel and max accel
 #define maxSpeedArms 500
 #define accelArms 1750
@@ -51,14 +51,14 @@ AccelStepper BLstepper(motorInterfaceType, BLStep, BLDir);  // Back Left
 AccelStepper FArmStepper(motorInterfaceType, FArmStep, FArmDir); // Front Arm (unused here)
 AccelStepper BArmStepper(motorInterfaceType, BArmStep, BArmDir); // Back Arm (unused here)
 AccelStepper CrslStepper(AccelStepper::FULL4WIRE, IN1,IN2,IN3,IN4); // Stepper for the carousel 
-
+/*
 // ===================== Servo Instances =======================
 Servo ejectorServo;     // Ejector Servo
 Servo FrontFlapServo;   // Front Flap Servo
 Servo BackFlapServo;    // Back Flap Servo
 Servo FrontArmServo;    // Front Arm Servo
 Servo BackArmServo;     // Back Arm Servo
-
+*/
 // ===================== Motion Parameters =====================
 const float wheelDiameterMM = 80.0;                 // Wheel diameter in mm
 const float stepsPerRevolution = 200 * 4;           // 200 steps/rev * 4 (microstepping = 1/4 step)
@@ -70,7 +70,7 @@ int maxAccel = 5000;    // Acceleration for steppers
 
 // ===================== Timing Variables =======================
 unsigned long nowTime = 0;
-
+/*
 unsigned long gateTimePrev = 0; // for Aidan's servo gate locks
 const int lockDelay = 50;
 
@@ -78,31 +78,36 @@ unsigned long carouselRotPrev = 0;
 unsigned long pistonLast = 0;
 const int pistonDelay = 1000;
 const int carouselDelay = 5000;
-
+*/
 // ===================== General Variables ======================
+/*
 int carouselCycles = 0;
 bool carouselEject = false;
 int pistonPosition = 180;
 int carouselState = 0; //0 = move, 1 = extend, 2 = retract;
-
+*/
 // ===================== Direction Settings =====================
 // Use 1 or -1 to reverse motor direction to match real-world wiring
 int FrontRight = -1;
 int FrontLeft  = -1;
 int BackRight  = 1;
-int BackLeft   = -1;
+int BackLeft   = 1;
 int FArm = 1;
 int BArm = 1;
 
 // ===================== State Machine for Movements =====================
 enum MovementState {
-  MOVE_RIGHT, WAIT1,
-  MOVE_LEFT, WAIT2,
-  MOVE_FORWARD1, WAIT3,
-  MOVE_FORWARD2, DONE
+  TURN_RIGHT1, WAIT1,
+  FORWARD1, WAIT2,
+  TURN_LEFT1, WAIT3,
+  TURN_RIGHT2, WAIT4,
+  FORWARD2, WAIT5,
+  TURN_LEFT2, WAIT6,
+  FORWARD3, WAIT7,
+  FORWARD4, DONE
 };
 
-MovementState currentState = MOVE_RIGHT; // Starting state
+MovementState currentState = FORWARD1; // Starting state
 unsigned long movementStartTime = 0;     // Time when last movement ended
 bool movementStarted = false;            // Flag to indicate if current movement has been triggered
 
@@ -132,6 +137,25 @@ void moveDistance(float forwardMM, float strafeMM) {
   BLstepper.setMaxSpeed(maxSpeed); BLstepper.setAcceleration(maxAccel);
 }
 
+// =============== Rotate function ===========================
+void rotateDegrees(float degrees) {
+  // 360 degrees ≈ robot turning in place with each wheel going a certain distance
+  float robotCircumferenceMM = 775; // Replace with your actual robot turning circumference (in mm)
+  float distancePerWheel = ((robotCircumferenceMM * degrees) / 360.0) * 2;
+  long steps = (long)(distancePerWheel * stepsPerMM);
+
+  FRstepper.move(-FrontRight * steps);
+  FLstepper.move(FrontLeft * steps);
+  BRstepper.move(-BackRight * steps);
+  BLstepper.move(BackLeft * steps);
+
+  FRstepper.setMaxSpeed(maxSpeed); FRstepper.setAcceleration(maxAccel);
+  FLstepper.setMaxSpeed(maxSpeed); FLstepper.setAcceleration(maxAccel);
+  BRstepper.setMaxSpeed(maxSpeed); BRstepper.setAcceleration(maxAccel);
+  BLstepper.setMaxSpeed(maxSpeed); BLstepper.setAcceleration(maxAccel);
+}
+
+
 // Runs all steppers each loop iteration to progress toward target positions
 void runAllSteppers() {
   FRstepper.run();
@@ -148,7 +172,7 @@ bool steppersAreRunning() {
 }
 
 // ================================= Carousel control Code ==========================
-
+/*
 void carouselHandler()
 {
   CrslStepper.runSpeedToPosition();
@@ -198,9 +222,9 @@ void carouselHandler()
     break;
   }
 }
-
+*/
 // ===================Back arm function ====================
-
+/*
 void backArmPosition (float angleBackDegrees){
   // Clamp angle
   if (angleBackDegrees < 0) angleBackDegrees += 360;
@@ -227,11 +251,24 @@ void moveArms()
 {
   
 }
-
+*/
 // ===================== Setup Function =====================
 void setup() {
   Serial.begin(115200); // Start serial communication for debugging
 
+  pinMode(33, OUTPUT);
+
+  digitalWrite(33, HIGH);
+  delay(300);
+  digitalWrite(33, LOW);
+  delay(300);
+  digitalWrite(33, HIGH);
+  delay(300);
+  digitalWrite(33, LOW);
+  delay(300);
+  digitalWrite(33, HIGH);
+  delay(3800);
+/*
   ejectorServo.attach(11);
   ejectorServo.write(180);
 
@@ -239,7 +276,7 @@ void setup() {
   BackFlapServo.attach(BFlapServoPin);
   FrontArmServo.attach(FArmServoPin);
   BackArmServo.attach(BArmServoPin);
-
+*/
   // Set all enable pins to OUTPUT mode
   pinMode(FREn, OUTPUT); pinMode(FLEn, OUTPUT);
   pinMode(BREn, OUTPUT); pinMode(BLEn, OUTPUT);
@@ -255,97 +292,136 @@ void setup() {
   FLstepper.setMaxSpeed(maxSpeed); FLstepper.setAcceleration(maxAccel);
   BRstepper.setMaxSpeed(maxSpeed); BRstepper.setAcceleration(maxAccel);
   BLstepper.setMaxSpeed(maxSpeed); BLstepper.setAcceleration(maxAccel);
+  /*
   FArmStepper.setMaxSpeed(maxSpeedArms); 
   FArmStepper.setAcceleration(accelArms);
   BArmStepper.setMaxSpeed(maxSpeedArms); 
   BArmStepper.setAcceleration(accelArms);
+  */
   CrslStepper.setMaxSpeed(600);
   CrslStepper.setSpeed(100);
 
   //-------------------- CAROUSEL TESTING REMOVE LATER -------------------
+  /*
   carouselCycles = 3;
   carouselEject = true;
+  */
 }
 
 // ===================== Main Loop =====================
 void loop() {
   runAllSteppers(); // Continuously run all motors
-  carouselHandler();
-  ejectorServo.write(pistonPosition);
+//  carouselHandler();
+//  ejectorServo.write(pistonPosition);
 
   nowTime = millis(); // Current time in ms
 
   // State machine for sequencing robot movements
   switch (currentState) {
-    case MOVE_RIGHT:
-      if (!movementStarted) {
-        moveDistance(0, -170); // Strafe right by 170 mm
-        movementStarted = true;
-      }
-      if (!steppersAreRunning()) {
-        currentState = WAIT1; // Go to wait state
-        movementStartTime = nowTime;
-        movementStarted = false;
-      }
-      break;
+  case FORWARD1:
+    if (!movementStarted) {
+      moveDistance(650, 0); // Move forward 170 mm
+      movementStarted = true;
+    }
+    if (!steppersAreRunning()) {
+      currentState = WAIT2;
+      movementStartTime = nowTime;
+      movementStarted = false;
+    }
+    break;
 
-    case WAIT1:
-      // Wait 500ms after previous move before continuing
-      if (nowTime - movementStartTime >= 500) {
-        currentState = MOVE_LEFT;
-      }
-      break;
+  case WAIT2:
+    if (nowTime - movementStartTime >= 500) {
+      currentState = TURN_LEFT1;
+    }
+    break;
 
-    case MOVE_LEFT:
-      if (!movementStarted) {
-        moveDistance(0, -160); // Strafe left by 160 mm (typo: maybe should be positive?)
-        movementStarted = true;
-      }
-      if (!steppersAreRunning()) {
-        currentState = WAIT2;
-        movementStartTime = nowTime;
-        movementStarted = false;
-      }
-      break;
+  case TURN_LEFT1:
+    if (!movementStarted) {
+      moveDistance(-300, 0);
+      movementStarted = true;
+    }
+    if (!steppersAreRunning()) {
+      currentState = WAIT3;
+      movementStartTime = nowTime;
+      movementStarted = false;
+    }
+    break;
 
-    case WAIT2:
-      if (nowTime - movementStartTime >= 500) {
-        currentState = MOVE_FORWARD1;
-      }
-      break;
+  case WAIT3:
+    if (nowTime - movementStartTime >= 500) {
+      currentState = TURN_RIGHT2;
+    }
+    break;
 
-    case MOVE_FORWARD1:
-      if (!movementStarted) {
-        moveDistance(900, 0); // Move forward by 900 mm
-        movementStarted = true;
-      }
-      if (!steppersAreRunning()) {
-        currentState = WAIT3;
-        movementStartTime = nowTime;
-        movementStarted = false;
-      }
-      break;
+  case TURN_RIGHT2:
+    if (!movementStarted) {
+      rotateDegrees(90);
+      movementStarted = true;
+    }
+    if (!steppersAreRunning()) {
+      currentState = WAIT4;
+      movementStartTime = nowTime;
+      movementStarted = false;
+    }
+    break;
 
-    case WAIT3:
-      if (nowTime - movementStartTime >= 1000) {
-        currentState = MOVE_FORWARD2;
-      }
-      break;
+  case WAIT4:
+    if (nowTime - movementStartTime >= 500) {
+      currentState = FORWARD2;
+    }
+    break;
 
-    case MOVE_FORWARD2:
-      if (!movementStarted) {
-        moveDistance(800, 0); // Move forward by another 800 mm
-        movementStarted = true;
-      }
-      if (!steppersAreRunning()) {
-        currentState = DONE;
-        movementStarted = false;
-      }
-      break;
+  case FORWARD2:
+    if (!movementStarted) {
+      moveDistance(-1000, 0);
+      movementStarted = true;
+    }
+    if (!steppersAreRunning()) {
+      currentState = WAIT5;
+      movementStartTime = nowTime;
+      movementStarted = false;
+    }
+    break;
 
-    case DONE:
-      // All motion complete. Idle state.
-      break;
+  case WAIT5:
+    if (nowTime - movementStartTime >= 1500) {
+      currentState = TURN_LEFT2;
+    }
+    break;
+
+  case TURN_LEFT2:
+    if (!movementStarted) {
+      moveDistance(-800, 0);
+      movementStarted = true;
+    }
+    if (!steppersAreRunning()) {
+      currentState = WAIT6;
+      movementStartTime = nowTime;
+      movementStarted = false;
+    }
+    break;
+
+  case WAIT6:
+    if (nowTime - movementStartTime >= 500) {
+      currentState = DONE;
+    }
+    break;
+//
+//  case FORWARD4:
+//    if (!movementStarted) {
+//      moveDistance(900, 0); // Final forward 800 mm
+//      movementStarted = true;
+//    }
+//    if (!steppersAreRunning()) {
+//      currentState = DONE;
+//      movementStarted = false;
+//    }
+//    break;
+//
+  case DONE:
+    digitalWrite(33, LOW);
+    break;
   }
 
   //------------------------------------------ Sweep Code to test Aidans gate servos
@@ -371,5 +447,5 @@ void loop() {
     }*/
   //---------------------------------------------------End Sweep test
 
-  delayMicroseconds(100); // Brief pause to avoid CPU overload
+//  delayMicroseconds(100); // Brief pause to avoid CPU overload
 }
